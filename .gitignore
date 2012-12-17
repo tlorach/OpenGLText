@@ -161,3 +161,6 @@ pip-log.txt
 
 # Mac crap
 .DS_Store
+
+#specific to the project
+cmake_built

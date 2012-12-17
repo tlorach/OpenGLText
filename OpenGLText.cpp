@@ -51,7 +51,7 @@
 #   include "gl\glew.h"
 //#   include "logging.h"
 
-#include "oglText.h"
+#include "OpenGLText.h"
 #include "tga.h"
 
 #ifndef M_PI
