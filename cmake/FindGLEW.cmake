@@ -20,6 +20,8 @@ if (WIN32)
             $ENV{GLEW_LOCATION}/include
             $ENV{PROGRAMFILES}/GLEW/include
             ${PROJECT_SOURCE_DIR}/extern/glew/include
+            ${GLEW_LOCATION}
+            $ENV{GLEW_LOCATION}
             DOC "The directory where GL/glew.h resides" )
     find_file( GLEW_SOURCE
         NAMES
@@ -29,6 +31,8 @@ if (WIN32)
             $ENV{GLEW_LOCATION}/src
             $ENV{PROGRAMFILES}/GLEW/src
             ${PROJECT_SOURCE_DIR}/extern/glew/src
+            ${GLEW_LOCATION}
+            $ENV{GLEW_LOCATION}
             DOC "The directory where GL/glew.c resides" )
     if(ARCH STREQUAL "x86")
       find_library( GLEW_LIBRARY
@@ -48,6 +52,8 @@ if (WIN32)
               ${PROJECT_SOURCE_DIR}/extern/glew/lib
               ${PROJECT_SOURCE_DIR}/extern/glew/lib/x86
               ${PROJECT_SOURCE_DIR}/extern/glew/lib/win32
+              ${GLEW_LOCATION}
+              $ENV{GLEW_LOCATION}
               DOC "The GLEW library")
     else()
       find_library( GLEW_LIBRARY
@@ -63,6 +69,8 @@ if (WIN32)
               $ENV{GLEW_LOCATION}/lib
               $ENV{PROGRAMFILES}/GLEW/lib
               ${PROJECT_SOURCE_DIR}/extern/glew/lib
+              ${GLEW_LOCATION}
+              $ENV{GLEW_LOCATION}
               DOC "The GLEW library")
     endif()
 endif ()
