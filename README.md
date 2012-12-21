@@ -47,6 +47,9 @@ I have put a compiled version of it for Windows. Note this application would req
 
 bakeFonts.exe < .ttf file > < size >
 
+Example from the demo :
+![Example](https://github.com/tlorach/OpenGLText/raw/master/example/example.png)
+
 __Few comments:__
 
 * I found this tool online, but I could have used anything that would use freetype library.
