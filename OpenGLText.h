@@ -39,6 +39,8 @@ class OpenGLText
 public:
     OpenGLText();
     ~OpenGLText();
+    static void BackupStates();
+    static void RestoreStates();
     void beginString();
     void endString();
     void stringSize(const char *text, float *sz);
@@ -64,6 +66,8 @@ private:
     unsigned int        m_fontTex;
     float               m_vertexDepth;
     int                 m_indexOffset;
+    unsigned int        m_ebo, m_vbo;
+    unsigned int        m_ebosz, m_vbosz;
     struct TCanvas
     {
         float w,h;
