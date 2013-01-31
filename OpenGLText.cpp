@@ -48,19 +48,6 @@
 
 #include <math.h>
 
-#if 0
-#include "bintrace.h"
-#include "replay.h"
-//#include "playhooks.h"
-#include "glstrings.h"
-#include "vmm.h"
-#include "log.h"
-#include "logging.h" // for the UI
-#include "playInteractive.h" // for pint->mainWinSz[0|1]
-#include "tracedisplay.h"
-#include "glProcs.h"
-extern glProcStruct *pglProcs;
-#endif
 #if defined(__APPLE__)
     #include <GLUT/glut.h>
 #else
