@@ -1,4 +1,13 @@
 #include "tga.h"
+
+namespace gltext
+{
+   AbstractRenderer::AbstractRenderer(Font* font)
+      : mFont(font)
+   {
+   }
+
+
    struct GlyphInfo
    {
        struct Pix // pixel oriented data
@@ -37,6 +46,48 @@
        Norm norm;
        GlyphInfo glyphs[256];
    };
+
+static char headerStr[] = "\
+   struct GlyphInfo\n\
+   {\n\
+       struct Pix // pixel oriented data\n\
+       {\n\
+           int u, v;\n\
+           int width, height;\n\
+           int advance;\n\
+           int offX, offY;\n\
+       };\n\
+       struct Norm // normalized data\n\
+       {\n\
+           float u, v; // position in the map in normalized coords\n\
+           float width, height;\n\
+           float advance;\n\
+           float offX, offY;\n\
+       };\n\
+       Pix  pix;\n\
+       Norm norm;\n\
+   };\n\
+   struct FileHeader\n\
+   {\n\
+       int texwidth, texheight;\n\
+       struct Pix\n\
+       {\n\
+           int ascent;\n\
+           int descent;\n\
+           int linegap;\n\
+       };\n\
+       struct Norm\n\
+       {\n\
+           float ascent;\n\
+           float descent;\n\
+           float linegap;\n\
+       };\n\
+       Pix  pix;\n\
+       Norm norm;\n\
+       GlyphInfo glyphs[256];\n\
+   };\n\
+   static FileHeader font = \n\
+";
 
    void GLTEXT_CALL AbstractRenderer::saveFonts(const char* file)
    {
@@ -149,9 +200,59 @@
       }
       fwrite( fileHeader, sizeof (unsigned char), fileSize, fh );
       fclose( fh );
+      //
+      // Write the C version
+      //
+      sprintf(fileNameBin, "%s_%d.h", fileName, mFont->getSize());
+      if( !(fh = fopen( fileNameBin, "w" )) )
+        return;
+      fprintf(fh, "namespace font_%d {\n", /*fileName, */mFont->getSize());
+      fprintf(fh, headerStr);
+      fprintf(fh, "{ %d, %d,\n", fileHeader->texwidth, fileHeader->texheight);
+      fprintf(fh, "{ %d, %d, %d },\n", fileHeader->pix.ascent, fileHeader->pix.descent, fileHeader->pix.linegap);
+      fprintf(fh, "{ %.3ff, %.3ff, %.3ff },\n", fileHeader->norm.ascent, fileHeader->norm.descent, fileHeader->norm.linegap);
+      fprintf(fh, "{\n");
+      for (int itr = 0; itr<256; itr++)
+      {
+          GlyphInfo &g = fileHeader->glyphs[itr];
+          fprintf(fh, "/*%c*/{ { %d, %d, %d, %d, %d, %d, %d },{%.3ff, %.3ff, %.3ff, %.3ff, %.3ff, %.3ff, %.3ff} },\n",isprint(itr) ? itr:' ',
+           g.pix.u, g.pix.v,
+           g.pix.width, g.pix.height,
+           g.pix.advance,
+           g.pix.offX, g.pix.offY,
+           g.norm.u, g.norm.v,
+           g.norm.width, g.norm.height,
+           g.norm.advance,
+           g.norm.offX, g.norm.offY);
+      }
+      fprintf(fh, "} };\n}\n");
+      fclose( fh );
+
       TGA tga;
       char fileNameTGA[100];
       sprintf(fileNameTGA, "%s_%d.tga", fileName, mFont->getSize());
       TGA::TGAError err = tga.saveFromExternalData( fileNameTGA, fileHeader->texwidth, fileHeader->texheight, TGA::RGB, data );
-
+      //
+      //
+      sprintf(fileNameBin, "%s_%d_bitmap.h", fileName, mFont->getSize());
+      if( !(fh = fopen( fileNameBin, "w" )) )
+        return;
+      fprintf(fh, "namespace font_%d {\n", /*fileName, */mFont->getSize());
+      fprintf(fh, "  static int imageW = %d;\nstatic int imageH = %d;\n", fileHeader->texwidth, fileHeader->texheight);
+      fprintf(fh, "  static unsigned char image[] = { //gray-scale image\n");
+      u8 *l = data;
+      for(int y=0; y<fileHeader->texheight;y++)
+      {
+          for(int x=0; x<fileHeader->texwidth;x++)
+          {
+            fprintf(fh, "%d,", *l);
+            l++;
+          }
+          fprintf(fh, "\n");
+      }
+      fprintf(fh, "};\n}\n");
+      fclose( fh );
    }
+
+   void GLTEXT_CALL AbstractRenderer::render(const char* text)
+   

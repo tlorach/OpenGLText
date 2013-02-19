@@ -37,6 +37,48 @@
 class OpenGLText
 {
 public:
+    //
+    // Header and structure for what is in the .bin file of the font
+    //
+    struct GlyphInfo
+    {
+       struct Pix // pixel oriented data
+       {
+           int u, v;
+           int width, height;
+           int advance;
+           int offX, offY;
+       };
+       struct Norm // normalized data
+       {
+           float u, v; // position in the map in normalized coords
+           float width, height;
+           float advance;
+           float offX, offY;
+       };
+       Pix  pix;
+       Norm norm;
+    };
+    struct FileHeader
+    {
+       int texwidth, texheight;
+       struct Pix
+       {
+           int ascent;
+           int descent;
+           int linegap;
+       };
+       struct Norm
+       {
+           float ascent;
+           float descent;
+           float linegap;
+       };
+       Pix  pix;
+       Norm norm;
+       GlyphInfo glyphs[256];
+    };
+
     OpenGLText();
     ~OpenGLText();
     static void BackupStates();
@@ -47,9 +89,11 @@ public:
     void drawString( int x, int y, const char * text, int nbLines, unsigned long color);
     void drawString( int x, int y, const char * text, int nbLines, float * color4f);
     bool init(const char * fontName, int w, int h);
+    bool init(unsigned char *imageData, FileHeader *glyphInfos, int w, int h);
     void changeCanvas(int w, int h);
     void changeSize(int w, int h);
 private:
+    bool init(int w, int h);
     static char*         cWidgetVSSource2;
     static char*         cWidgetFSSource2;
     unsigned int        c_fontNbChars;
@@ -99,48 +143,8 @@ private:
     std::vector< unsigned int > m_indices;
     std::vector< Vertex >       m_vertices;
 
-    //
-    // Header and structure for what is in the .bin file of the font
-    //
-    struct GlyphInfo
-    {
-       struct Pix // pixel oriented data
-       {
-           int u, v;
-           int width, height;
-           int advance;
-           int offX, offY;
-       };
-       struct Norm // normalized data
-       {
-           float u, v; // position in the map in normalized coords
-           float width, height;
-           float advance;
-           float offX, offY;
-       };
-       Pix  pix;
-       Norm norm;
-    };
-    struct FileHeader
-    {
-       int texwidth, texheight;
-       struct Pix
-       {
-           int ascent;
-           int descent;
-           int linegap;
-       };
-       struct Norm
-       {
-           float ascent;
-           float descent;
-           float linegap;
-       };
-       Pix  pix;
-       Norm norm;
-       GlyphInfo glyphs[256];
-    };
-    FileHeader glyphInfos;
+    FileHeader *glyphInfos;
+    bool        allocated;
 
     GLuint CompileGLSLShader( GLenum target, const char* shader);
     GLuint LinkGLSLProgram( GLuint vertexShader, GLuint fragmentShader);
