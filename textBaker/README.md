@@ -7,6 +7,10 @@ I have put a compiled version of it for Windows. Note this application would req
 
 bakeFonts.exe < .ttf file > < size >
 
+this tool will generate 2 possible ways of including the font:
+* bin + tga : those 2 files can be used to setup the font
+* headers font_xx.h and font_xx_bitmap.h : in this case, everything is generated as include files. this is for the case where one wants to have the font data part of the exe file without any reference to external files.
+
 Few comments:
 ------------
 * I found this tool online, but I could have used anything that would use freetype library.
