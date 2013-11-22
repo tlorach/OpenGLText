@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="9.00"
 	Name="bakeFonts"
-	ProjectGUID="{77F28312-B538-4C74-B373-CDB271EB74A2}"
+	ProjectGUID="{47F9EE4E-71E9-45AB-ACCD-DBA62204BCE7}"
 	RootNamespace="bakeFonts"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="131072"
@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\glew;..\..\src;..\..\..\freetype-2.3.5-1\include;..\..\glut\include"
+				AdditionalIncludeDirectories="..\..\glew;..\..\src;..\..\..\freetype-2.3.5-1\include;..\..\..\freeglut-2.8.0\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;GLTEXT_EXPORTS;GLTEXT_CALL=;GLTEXT_DECL="
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -62,10 +62,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="freetype.lib"
+				AdditionalDependencies="freetype.lib gltext.lib"
 				OutputFile="..\..\$(ProjectName).exe"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\..\..\freetype-2.3.5-1\lib,..\..\glut\lib"
+				AdditionalLibraryDirectories="..\..\Debug;..\..\..\freetype-2.3.5-1\lib,..\..\..\freeglut-2.8.0\lib\x86"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				RandomizedBaseAddress="1"

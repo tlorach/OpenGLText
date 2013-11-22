@@ -350,7 +350,7 @@ bool OpenGLText::init(unsigned char *imageData, FileHeader *glyphInfos_, int w, 
     GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
     GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
     GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-    GLenum extFmt = GL_LUMINANCE; //GL_RED
+    GLenum extFmt = GL_RED;
     GL(TexImage2D(GL_TEXTURE_2D, 0, extFmt, glyphInfos->texwidth, glyphInfos->texheight, 0, extFmt, GL_UNSIGNED_BYTE, imageData));
     GLenum err = GL(GetError());
 
@@ -606,6 +606,8 @@ void OpenGLText::endString()
 //
 void OpenGLText::stringSize(const char *text, float *sz)
 {
+    if(!glyphInfos)
+        return;
     int h = glyphInfos->pix.ascent + glyphInfos->pix.descent + glyphInfos->pix.linegap;
     float lPosX = 0+1;
     float lPosY = 0 ;
@@ -657,6 +659,8 @@ void OpenGLText::drawString( int x, int y, const char * text, int nbLines, unsig
 //
 void OpenGLText::drawString( int x, int y, const char * text, int nbLines, float * color4f)
 {
+    if(!glyphInfos)
+        return;
     int h = glyphInfos->pix.ascent + glyphInfos->pix.descent + glyphInfos->pix.linegap;
     float lPosX = x+1;
     float lPosY = y ;
