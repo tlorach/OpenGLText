@@ -606,6 +606,8 @@ void OpenGLText::endString()
 //
 void OpenGLText::stringSize(const char *text, float *sz)
 {
+    if(!glyphInfos)
+        return;
     int h = glyphInfos->pix.ascent + glyphInfos->pix.descent + glyphInfos->pix.linegap;
     float lPosX = 0+1;
     float lPosY = 0 ;
@@ -657,6 +659,8 @@ void OpenGLText::drawString( int x, int y, const char * text, int nbLines, unsig
 //
 void OpenGLText::drawString( int x, int y, const char * text, int nbLines, float * color4f)
 {
+    if(!glyphInfos)
+        return;
     int h = glyphInfos->pix.ascent + glyphInfos->pix.descent + glyphInfos->pix.linegap;
     float lPosX = x+1;
     float lPosY = y ;

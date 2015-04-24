@@ -1,4 +1,4 @@
-Baking Fonts is aschieved for now with patching GLText 0.3.1 ( http://gltext.sourceforge.net/home.php )
+Baking Fonts is aschieved for now with patching GLText 0.3.1 ( http://gltext.sourceforge.net/home.php ) from Ben Scott
 
 This folder contains the changes I made to finally save the data I needed.
 Download freetype (I took 2.3.5-1) and download GLText. Then modify it with the data in this folder.
