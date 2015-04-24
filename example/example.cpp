@@ -172,10 +172,13 @@ initGL() {
     glDepthFunc(GL_LEQUAL);
 
     if(!oglText.init("Candy Script_48", g_width, g_height))
+      if(!oglText.init(PROJECT_SOURCE_DIR "/Candy Script_48", g_width, g_height))
         exit(1);
     if(!oglText2.init("Shelley Allegro BT_26", g_width, g_height))
+      if(!oglText2.init(PROJECT_SOURCE_DIR "/Shelley Allegro BT_26", g_width, g_height))
         exit(1);
     if(!oglText3.init("baub_16", g_width, g_height))
+      if(!oglText3.init(PROJECT_SOURCE_DIR "/baub_16", g_width, g_height))
         exit(1);
     if(!oglText4.init(font_10::image, (OpenGLText::FileHeader*)&font_10::font, g_width, g_height))
         exit(1);
