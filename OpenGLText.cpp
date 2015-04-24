@@ -350,7 +350,7 @@ bool OpenGLText::init(unsigned char *imageData, FileHeader *glyphInfos_, int w, 
     GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
     GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
     GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-    GLenum extFmt = GL_LUMINANCE; //GL_RED
+    GLenum extFmt = GL_RED;
     GL(TexImage2D(GL_TEXTURE_2D, 0, extFmt, glyphInfos->texwidth, glyphInfos->texheight, 0, extFmt, GL_UNSIGNED_BYTE, imageData));
     GLenum err = GL(GetError());
 

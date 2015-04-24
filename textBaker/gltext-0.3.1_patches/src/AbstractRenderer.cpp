@@ -7,7 +7,9 @@ namespace gltext
    {
    }
 
-
+   //////////////////////////////////////////////////////////////////
+   // ADDED CODE:
+   
    struct GlyphInfo
    {
        struct Pix // pixel oriented data
@@ -253,6 +255,8 @@ static char headerStr[] = "\
       fprintf(fh, "};\n}\n");
       fclose( fh );
    }
+   // END OF ADDED CODE
+   //////////////////////////////////////////////////////////////////
 
    void GLTEXT_CALL AbstractRenderer::render(const char* text)
    
