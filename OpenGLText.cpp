@@ -30,7 +30,7 @@
         oglText.endString(); // will render the whole at once
 */
 #define USE_INSTANCED_ARRAYS
-//#define USEFONTMETRICASUBO // I have a bug, here...
+#define USEFONTMETRICASUBO // I have a bug, here...
 #define NV_REPORT_COMPILE_ERRORS
 
 #pragma warning(disable:4244) // dble to float conversion warning
@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <assert.h>
 
 #ifdef WIN32
 #include <direct.h>
@@ -301,12 +302,14 @@ char* OpenGLText::cWidgetVSSource2 = {
     uniform vec4 canvas; \n"
 #ifdef USEFONTMETRICASUBO
     "layout(std140) uniform TexLocation { \n\
-        vec4 texlocation[256];\n\
+        vec4 texlocation[256]; // Bugged !!\n\
     };\n"
+    "uniform vec4 texlocation2[256]; // Working\n"
+#else
+   "in vec4 TexCoord;\n"
 #endif
-   "in vec4 Position;\n\
-    in vec4 TexCoord;\n\
-    in vec4 Color;\n\
+   "in vec4 Position;\n"
+   "in vec4 Color;\n\
     out vec2 vsTC;\n\
     out vec4 vsColor;\n\
 \n\
@@ -323,15 +326,11 @@ char* OpenGLText::cWidgetVSSource2 = {
         else if ((id & 3)==3) { p.y += h; }\n\
         \n"
 #ifdef USEFONTMETRICASUBO
-        "int g = int(Color.w);\n\
-        //x = 0.175781250;//texlocation[g].u;\n\
-        //y = 0.00161550893;//texlocation[g].v;\n\
-        //w = 0.15234375;//texlocation[g].w;\n\
-        //h = 0.0726979002;//texlocation[g].h;\n\
-        x = texlocation[0].x;\n\
-        y = texlocation[0].y;\n\
-        w = texlocation[0].z;\n\
-        h = texlocation[0].w;\n"
+       "int g = int(Color.w);\n\
+        x = texlocation2[g].x;\n\
+        y = texlocation2[g].y;\n\
+        w = texlocation2[g].z;\n\
+        h = texlocation2[g].w;\n"
 #else
        "x = TexCoord.x;\n\
         y = TexCoord.y;\n\
@@ -575,33 +574,40 @@ bool OpenGLText::init(int w, int h)
         }
         glUseProgram(0);
 
-        locTc  = glGetAttribLocation( m_widgetProgram, "TexCoord" );
-        locCol = glGetAttribLocation( m_widgetProgram, "Color" );
-        locPos = glGetAttribLocation( m_widgetProgram, "Position" );
         glGenBuffers(1, &m_vbo);
 #ifdef USEFONTMETRICASUBO
         // Upload the font metric in a UBO
         float *tcs = new float[256*4];
         for(int i=0; i<256; i++)
         {
-            tcs[4*i+0] = glyphInfos->glyphs['H'].norm.u;
-            tcs[4*i+1] = glyphInfos->glyphs['H'].norm.v;
-            tcs[4*i+2] = glyphInfos->glyphs['H'].norm.width;
-            tcs[4*i+3] = glyphInfos->glyphs['H'].norm.height;
+            tcs[(4*i)+0] = glyphInfos->glyphs[i].norm.u;
+            tcs[(4*i)+1] = glyphInfos->glyphs[i].norm.v;
+            tcs[(4*i)+2] = glyphInfos->glyphs[i].norm.width;
+            tcs[(4*i)+3] = glyphInfos->glyphs[i].norm.height;
         }
+        
         glGenBuffers(1, &m_boTexLocation);
         glBindBuffer( GL_UNIFORM_BUFFER, m_boTexLocation );
         glBufferData(GL_UNIFORM_BUFFER, 256*4*sizeof(float), tcs, GL_STATIC_DRAW);
-        m_TexLocation = glGetUniformBlockIndex(m_widgetProgram, "TexLocation");
-        GLint blockSize; // for debug purpose...
-        glGetActiveUniformBlockiv(m_widgetProgram, m_TexLocation, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize);
         glUseProgram(m_widgetProgram);
         {
+            // BUG HERE...
+            m_TexLocation = glGetUniformBlockIndex(m_widgetProgram, "TexLocation");
+            GLint blockSize; // for debug purpose...
+            glGetActiveUniformBlockiv(m_widgetProgram, m_TexLocation, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize);
+            assert(blockSize == 256*4*sizeof(float));
             glBindBufferBase( GL_UNIFORM_BUFFER, m_TexLocation, m_boTexLocation );
+            // This one is working
+            int ll = glGetUniformLocation( m_widgetProgram, "texlocation2" );
+            glUniform4fv(ll, 256, tcs);
         }
         glUseProgram(0);
         delete [] tcs;
+#else
+        locTc  = glGetAttribLocation( m_widgetProgram, "TexCoord" );
 #endif
+        locCol = glGetAttribLocation( m_widgetProgram, "Color" );
+        locPos = glGetAttribLocation( m_widgetProgram, "Position" );
     }
     return true;
 }
@@ -640,18 +646,21 @@ void OpenGLText::endString()
         } else
             glBufferSubData(GL_ARRAY_BUFFER, 0, m_vertices.size()*sizeof(Vertex), &(m_vertices.front()));
 
-        glEnableVertexAttribArray( locPos );
-        glEnableVertexAttribArray( locTc );
-        glEnableVertexAttribArray( locCol );
-
         static Vertex* pVtxOffset = NULL;
+        glEnableVertexAttribArray( locPos );
         glVertexAttribPointer( locPos, 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->pos );
+#ifndef USEFONTMETRICASUBO
+        glEnableVertexAttribArray( locTc );
         glVertexAttribPointer( locTc , 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->tc );
+#endif
+        glEnableVertexAttribArray( locCol );
         glVertexAttribPointer( locCol, 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->color );
 
 #ifdef USE_INSTANCED_ARRAYS
         glVertexAttribDivisor(locPos, 4);
+#ifndef USEFONTMETRICASUBO
         glVertexAttribDivisor(locTc, 4);
+#endif
         glVertexAttribDivisor(locCol, 4);
 #endif
 
@@ -671,9 +680,12 @@ void OpenGLText::endString()
 
         // switch vertex attribs back off
         glDisableVertexAttribArray( locPos );
+#ifndef USEFONTMETRICASUBO
         glDisableVertexAttribArray( locTc );
+#endif
         glDisableVertexAttribArray( locCol );
-        //CHECKGLERRORS();
+        GLenum err = glGetError();
+        //assert(err == 0);
         m_vertices.resize(0);
     }
 }
@@ -775,7 +787,7 @@ void OpenGLText::drawString( int x, int y, const char * text, int nbLines, float
             v.setPos( pX ,             pY,                  g.pix.width,     g.pix.height);
             v.setTC ( g.norm.u,        g.norm.v,            g.norm.width,    g.norm.height);
             // to find back the Texture coords in atlas
-            v.color[3] = (float)('B');
+            v.color[3] = (float)(*c);
             pushVertex(&v);
 #else
 

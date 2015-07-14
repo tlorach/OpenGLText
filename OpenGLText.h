@@ -100,9 +100,6 @@ private:
     unsigned int        c_fontHeight;
     unsigned int        c_fontWidth;
     unsigned int        m_widgetProgram;
-    unsigned int        locPos;
-    unsigned int        locTc;
-    unsigned int        locCol;
     unsigned int        m_vShader;
     unsigned int        m_fShader;
     unsigned int        m_canvasVar;
@@ -115,7 +112,11 @@ private:
 #ifdef USEFONTMETRICASUBO
     unsigned int        m_TexLocation;
     unsigned int        m_boTexLocation;
+#else
+    unsigned int        locTc;
 #endif
+    unsigned int        locPos;
+    unsigned int        locCol;
     struct TCanvas
     {
         float w,h;
