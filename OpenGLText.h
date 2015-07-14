@@ -110,8 +110,8 @@ private:
     unsigned int        m_fontTex;
     float               m_vertexDepth;
     int                 m_indexOffset;
-    unsigned int        m_ebo, m_vbo;
-    unsigned int        m_ebosz, m_vbosz;
+    unsigned int        m_vbo;
+    unsigned int        m_vbosz;
     struct TCanvas
     {
         float w,h;
@@ -129,18 +129,17 @@ private:
         Vertex()
         { memset(this, 0, sizeof(Vertex)); }
 
-        void xy( float fx, float fy )
+        void setPos( float fx, float fy, float fz, float fw )
         {
-            pos[0] = fx; pos[1] = fy;
+            pos[0] = fx; pos[1] = fy; pos[2] = fz; pos[3] = fw;
         }
 
-        void xyuv( float fx, float fy, float fu, float fv )
+        void setTC( float fx, float fy, float fz, float fw )
         {
-            pos[0] = fx; pos[1] = fy; tc[0] = fu; tc[1] = fv;
+            tc[0] = fx; tc[1] = fy; tc[2] = fz; tc[3] = fw;
         }
     };
 
-    std::vector< unsigned int > m_indices;
     std::vector< Vertex >       m_vertices;
 
     FileHeader *glyphInfos;
@@ -148,9 +147,6 @@ private:
 
     GLuint CompileGLSLShader( GLenum target, const char* shader);
     GLuint LinkGLSLProgram( GLuint vertexShader, GLuint fragmentShader);
-    void pushIndex( int vi );
-    void beginStrip();
-    void endStrip();
     void pushVertex( Vertex* v );
 };
 

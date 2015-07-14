@@ -29,6 +29,8 @@
         ...
         oglText.endString(); // will render the whole at once
 */
+#define USE_INSTANCED_ARRAYS
+#define NV_REPORT_COMPILE_ERRORS
 
 #pragma warning(disable:4244) // dble to float conversion warning
 
@@ -69,6 +71,9 @@ struct TextBackupState
 {
     struct vtxAttribData {
         GLvoid* ptr;
+#ifdef USE_INSTANCED_ARRAYS
+        int     divisor;
+#endif
         int     enabled;
         int     size;
         int     type;
@@ -99,6 +104,9 @@ struct TextBackupState
         attribs = (vtxAttribData*)malloc(sizeof(vtxAttribData)*maxVtxAttribs);
         for(int i=0; i<maxVtxAttribs; i++)
         {
+#ifdef USE_INSTANCED_ARRAYS
+            GL(GetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_DIVISOR, &(attribs[i].divisor)));
+#endif
             GL(GetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &(attribs[i].enabled)));
             GL(GetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_SIZE, &(attribs[i].size)));
             GL(GetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_TYPE, &(attribs[i].type)));
@@ -138,6 +146,9 @@ struct TextBackupState
                 GL(DisableVertexAttribArray(i));
             GL(BindBuffer(GL_ARRAY_BUFFER, attribs[i].bufferBinding));
             GL(VertexAttribPointer(i, attribs[i].size, attribs[i].type, attribs[i].normalized, attribs[i].stride, attribs[i].ptr));
+#ifdef USE_INSTANCED_ARRAYS
+            GL(VertexAttribDivisor(i, attribs[i].divisor));
+#endif
         }
         GL(BindBuffer(GL_ARRAY_BUFFER, 0));
         // TODO: texture
@@ -189,9 +200,7 @@ OpenGLText::OpenGLText()
     m_widgetProgram         = 0;
     m_vShader               = 0;
     m_fShader               = 0;
-    m_ebo                   = 0;
     m_vbo                   = 0;
-    m_ebosz                 = 0;
     m_vbosz                 = 0;
     m_canvasVar             = 0;
     m_fontTex               = 0;
@@ -261,7 +270,8 @@ inline GLuint OpenGLText::LinkGLSLProgram( GLuint vertexShader, GLuint fragmentS
 
     char * infoLog = new char[infoLogLength];
     GL(GetProgramInfoLog(program, infoLogLength, &charsWritten, infoLog));
-    printf(infoLog);
+    if(infoLogLength > 0)
+        fprintf( stderr, "Link failed:\n%s\n", infoLog);
     delete [] infoLog;
 #endif
 
@@ -281,38 +291,99 @@ inline GLuint OpenGLText::LinkGLSLProgram( GLuint vertexShader, GLuint fragmentS
 ///////////////////////////////////////////////////////////////////////////////////////
 //
 //
+#ifdef USE_INSTANCED_ARRAYS
 char* OpenGLText::cWidgetVSSource2 = {
-    "#version 120\n\
+    "#version 130\n\
     uniform vec4 canvas; \n\
 \n\
     in vec4 Position;\n\
     in vec4 TexCoord;\n\
     in vec4 Color;\n\
+    out vec2 vsTC;\n\
+    out vec4 vsColor;\n\
+\n\
+    void main()\n\
+    {\n\
+        int id = gl_VertexID;\n\
+        float x = Position.x;\n\
+        float y = Position.y;\n\
+        float w = Position[2];\n\
+        float h = Position[3];\n\
+        vec4 p = vec4(x,y,0,1);\n\
+        if ((id & 3)==1) { p.x += w; }\n\
+        else if ((id & 3)==2) { p.x += w; p.y += h; }\n\
+        else if ((id & 3)==3) { p.y += h; }\n\
+        \
+        x = TexCoord.x;\n\
+        y = TexCoord.y;\n\
+        w = TexCoord[2];\n\
+        h = TexCoord[3];\n\
+        vec2 tc = vec2(x,y);\n\
+        if ((id & 3)==1) { tc.x += w; }\n\
+        else if ((id & 3)==2) { tc.x += w; tc.y += h; }\n\
+        else if ((id & 3)==3) { tc.y += h; }\n\
+        \
+        gl_Position = vec4( ((p.x / canvas.x)*canvas.z*2.0 - 1.0), \n\
+                            ((p.y / canvas.y)*2.0 - 1.0), 0, 1.0); \n\
+        vsTC    = tc; \n\
+        vsColor = Color; \n\
+    }\n\
+    "};
+
+char* OpenGLText::cWidgetFSSource2 = {
+    "#version 130\n\
+    uniform sampler2D fontTex;\n\
+    in vec2 vsTC;\n\
+    in vec4 vsColor;\n\
+    out vec4 fragColor;\n\
+\n\
+    void main()\n\
+    {\n\
+        vec4 color; \n\
+        float distance = (texture2D( fontTex, vsTC ).x); \n\
+        color = vsColor;\n\
+        color.a *= distance;\n\
+        fragColor = color; \n\
+    }\n\
+    "};
+#else
+char* OpenGLText::cWidgetVSSource2 = {
+    "#version 130\n\
+    uniform vec4 canvas; \n\
+\n\
+    in vec4 Position;\n\
+    in vec4 TexCoord;\n\
+    in vec4 Color;\n\
+    out vec2 vsTC;\n\
+    out vec4 vsColor;\n\
 \n\
     void main()\n\
     {\n\
         gl_Position = vec4( (((Position.x) / canvas.x)*canvas.z*2.0 - 1.0), \n\
                    (((Position.y) / canvas.y)*2.0 - 1.0), 0, 1.0); \n\
-        gl_TexCoord[0] = TexCoord; \n\
-        gl_TexCoord[1] = Color; \n\
+        vsTC = TexCoord.xy; \n\
+        vsColor = Color; \n\
     }\n\
     "};
 
 char* OpenGLText::cWidgetFSSource2 = {
-    "#version 120\n\
+    "#version 130\n\
     uniform sampler2D fontTex;\n\
+    in vec2 vsTC;\n\
+    in vec4 vsColor;\n\
+    out vec4 fragColor;\n\
 \n\
     void main()\n\
     {\n\
-        vec2 texUV = gl_TexCoord[0].xy; \n\
+        vec2 texUV = vsTC; \n\
         vec4 color; \n\
         float distance = (texture2D( fontTex, texUV.xy ).x); \n\
-        color = gl_TexCoord[1];\n\
+        color = vsColor;\n\
         color.a *= distance;\n\
-        gl_FragColor = color; \n\
+        fragColor = color; \n\
     }\n\
     "};
-
+#endif
 ///////////////////////////////////////////////////////////////////////////////////////
 //
 //
@@ -487,48 +558,9 @@ bool OpenGLText::init(int w, int h)
         locTc  = GL(GetAttribLocation( m_widgetProgram, "TexCoord" ));
         locCol = GL(GetAttribLocation( m_widgetProgram, "Color" ));
         locPos = GL(GetAttribLocation( m_widgetProgram, "Position" ));
-
+        glGenBuffers(1, &m_vbo);
     }
-    GL(GenBuffers(2, &m_ebo/*followed by m_vbo*/));
     return true;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////
-//
-//
-void OpenGLText::pushIndex( int vi )
-{
-    if ((int) m_indices.size() == m_indexOffset)
-        m_indices.push_back( vi );
-    else if ((int) m_indices.size() <= m_indexOffset)
-    {
-        m_indices.resize( m_indexOffset );
-        m_indices[m_indexOffset] = vi;
-    }
-    else
-        m_indices[m_indexOffset] = vi;
-    m_indexOffset++;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////////
-//
-//
-void OpenGLText::beginStrip()
-{
-    //if (m_indices.size() > 0)
-    //{
-    //    pushIndex( m_vertices.size());
-    //}
-}
-
-///////////////////////////////////////////////////////////////////////////////////////
-//
-//
-void OpenGLText::endStrip()
-{
-    //pushIndex( m_vertices.size() - 1 );
-    pushIndex( - 1 );
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -536,7 +568,6 @@ void OpenGLText::endStrip()
 //
 void OpenGLText::pushVertex( Vertex* v )
 {
-    pushIndex( (unsigned int)m_vertices.size() );
     m_vertices.push_back( *v );
 }
 
@@ -557,7 +588,6 @@ void OpenGLText::endString()
     {
         bs.setStates();
         GL(BindBuffer( GL_ARRAY_BUFFER, m_vbo ));
-        GL(BindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_ebo ));
         // Note: we could also downsize the buffer if the size is really smaller than the one currently allocated
         // this could be done after few iterations, if we see that the size if still smaller than the allocation...
         if(m_vbosz < m_vertices.size())
@@ -566,12 +596,7 @@ void OpenGLText::endString()
             m_vbosz = m_vertices.size();
         } else
             GL(BufferSubData(GL_ARRAY_BUFFER, 0, m_vertices.size()*sizeof(Vertex), &(m_vertices.front())));
-        if(m_ebosz < m_indices.size())
-        {
-            GL(BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size()*sizeof(unsigned int), &(m_indices.front()), GL_STREAM_DRAW));
-            m_ebosz = m_indices.size();
-        } else
-            GL(BufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, m_indices.size()*sizeof(unsigned int), &(m_indices.front())));
+
         GL(EnableVertexAttribArray( locPos ));
         GL(EnableVertexAttribArray( locTc ));
         GL(EnableVertexAttribArray( locCol ));
@@ -581,13 +606,23 @@ void OpenGLText::endString()
         GL(VertexAttribPointer( locTc , 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->tc ));
         GL(VertexAttribPointer( locCol, 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->color ));
 
+#ifdef USE_INSTANCED_ARRAYS
+        GL(VertexAttribDivisor(locPos, 4));
+        GL(VertexAttribDivisor(locTc, 4));
+        GL(VertexAttribDivisor(locCol, 4));
+#endif
+
         //GL(ActiveTexture( GL_TEXTURE0 ));
         GL(BindTexture(GL_TEXTURE_2D, m_fontTex));
 
         GL(UseProgram( m_widgetProgram ));
         GL(Uniform4f( m_canvasVar, m_canvas.w, m_canvas.h, m_canvas.ratio, 0 ));
 
-        GL(DrawElements( GL_TRIANGLE_STRIP, m_indexOffset, GL_UNSIGNED_INT, NULL));
+#ifdef USE_INSTANCED_ARRAYS
+        glDrawArraysInstanced( GL_QUADS, 0, 4, m_vbosz*4);
+#else
+        GL(DrawArrays( GL_QUADS, 0, m_vbosz));
+#endif
 
         GL(UseProgram( 0 ));
 
@@ -597,7 +632,6 @@ void OpenGLText::endString()
         GL(DisableVertexAttribArray( locCol ));
         //CHECKGLERRORS();
         m_vertices.resize(0);
-        m_indices.resize(0);
     }
 }
 
@@ -694,12 +728,25 @@ void OpenGLText::drawString( int x, int y, const char * text, int nbLines, float
             GlyphInfo &g = glyphInfos->glyphs[*c];
             int pX = lPosX + g.pix.offX;
             int pY = lPosY - g.pix.height - g.pix.offY;
-            beginStrip();
-                v.xyuv( pX ,             pY,                  g.norm.u,            g.norm.v);           pushVertex(&v);
-                v.xyuv( pX ,             pY + g.pix.height,    g.norm.u,            g.norm.v+g.norm.height);  pushVertex(&v);
-                v.xyuv( pX + g.pix.width, pY,                  g.norm.u+g.norm.width,    g.norm.v);           pushVertex(&v);
-                v.xyuv( pX + g.pix.width, pY + g.pix.height,    g.norm.u+g.norm.width,    g.norm.v+g.norm.height);  pushVertex(&v);
-            endStrip();
+#ifdef USE_INSTANCED_ARRAYS
+            v.setPos( pX ,             pY,                  g.pix.width,     g.pix.height);
+            v.setTC ( g.norm.u,        g.norm.v,            g.norm.width,    g.norm.height);
+            pushVertex(&v);
+#else
+
+            v.setPos( pX ,                   pY,                     0,1);
+            v.setTC ( g.norm.u,              g.norm.v,               0,0);
+            pushVertex(&v);
+            v.setPos( pX + g.pix.width ,     pY,                     0,1);
+            v.setTC ( g.norm.u+g.norm.width, g.norm.v,               0,0);  
+            pushVertex(&v);
+            v.setPos( pX + g.pix.width,     pY + g.pix.height,      0,1);
+            v.setTC ( g.norm.u+g.norm.width, g.norm.v+g.norm.height, 0,0);           
+            pushVertex(&v);
+            v.setPos( pX,                    pY + g.pix.height,      0,1);
+            v.setTC ( g.norm.u,              g.norm.v+g.norm.height, 0,0);  
+            pushVertex(&v);
+#endif
             lPosX += g.pix.advance;
             lPosY += 0;
         }
