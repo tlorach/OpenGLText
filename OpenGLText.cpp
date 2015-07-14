@@ -56,7 +56,6 @@
 #else
     #include <GL/glew.h>
 #endif
-#define GL(f) gl##f
 
 #include "OpenGLText.h"
 #include "tga.h"
@@ -88,33 +87,33 @@ struct TextBackupState
     } }
     void backup()
     {
-        GL(GetIntegerv(GL_POLYGON_MODE, (GLint*)mode));
-        cull = GL(IsEnabled(GL_CULL_FACE));
-        //GL(GetIntegerv(GL_CULL_FACE_MODE, (GLint*)&));
-        stenciltest = GL(IsEnabled(GL_STENCIL_TEST));
-        GL(GetIntegerv(GL_STENCIL_VALUE_MASK, (GLint*)&stencilmask));
-        depthtest = GL(IsEnabled(GL_DEPTH_TEST));
-        GL(GetIntegerv(GL_DEPTH_WRITEMASK, (GLint*)&depthmask));
-        blend = GL(IsEnabled(GL_BLEND));
-        GL(GetIntegerv(GL_BLEND_SRC, (GLint*)&sfactor));
-        GL(GetIntegerv(GL_BLEND_DST, (GLint*)&dfactor));
-        GL(GetIntegerv(GL_COLOR_WRITEMASK, (GLint*)&red));
-        primrestart = GL(IsEnabled(GL_PRIMITIVE_RESTART));
-        GL(GetIntegerv(GL_PRIMITIVE_RESTART_INDEX, (GLint*)&primrestartid));
-        GL(GetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVtxAttribs));
+        glGetIntegerv(GL_POLYGON_MODE, (GLint*)mode);
+        cull = glIsEnabled(GL_CULL_FACE);
+        //glGetIntegerv(GL_CULL_FACE_MODE, (GLint*)&);
+        stenciltest = glIsEnabled(GL_STENCIL_TEST);
+        glGetIntegerv(GL_STENCIL_VALUE_MASK, (GLint*)&stencilmask);
+        depthtest = glIsEnabled(GL_DEPTH_TEST);
+        glGetIntegerv(GL_DEPTH_WRITEMASK, (GLint*)&depthmask);
+        blend = glIsEnabled(GL_BLEND);
+        glGetIntegerv(GL_BLEND_SRC, (GLint*)&sfactor);
+        glGetIntegerv(GL_BLEND_DST, (GLint*)&dfactor);
+        glGetIntegerv(GL_COLOR_WRITEMASK, (GLint*)&red);
+        primrestart = glIsEnabled(GL_PRIMITIVE_RESTART);
+        glGetIntegerv(GL_PRIMITIVE_RESTART_INDEX, (GLint*)&primrestartid);
+        glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVtxAttribs);
         attribs = (vtxAttribData*)malloc(sizeof(vtxAttribData)*maxVtxAttribs);
         for(int i=0; i<maxVtxAttribs; i++)
         {
 #ifdef USE_INSTANCED_ARRAYS
-            GL(GetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_DIVISOR, &(attribs[i].divisor)));
+            glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_DIVISOR, &(attribs[i].divisor));
 #endif
-            GL(GetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &(attribs[i].enabled)));
-            GL(GetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_SIZE, &(attribs[i].size)));
-            GL(GetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_TYPE, &(attribs[i].type)));
-            GL(GetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_NORMALIZED, &(attribs[i].normalized)));
-            GL(GetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_STRIDE, &(attribs[i].stride)));
-            GL(GetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, &(attribs[i].bufferBinding)));
-            GL(GetVertexAttribPointerv(i, GL_VERTEX_ATTRIB_ARRAY_POINTER, &(attribs[i].ptr)));
+            glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &(attribs[i].enabled));
+            glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_SIZE, &(attribs[i].size));
+            glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_TYPE, &(attribs[i].type));
+            glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_NORMALIZED, &(attribs[i].normalized));
+            glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_STRIDE, &(attribs[i].stride));
+            glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, &(attribs[i].bufferBinding));
+            glGetVertexAttribPointerv(i, GL_VERTEX_ATTRIB_ARRAY_POINTER, &(attribs[i].ptr));
         }
         valid = true;
     }
@@ -122,55 +121,55 @@ struct TextBackupState
     {
         if(!valid)
             return;
-        GL(PolygonMode(GL_FRONT_AND_BACK, mode[0]));
-        //GL(PolygonMode(GL_BACK, mode[1])); deprecated in Core GL !!!!!!
-        if(cull) GL(Enable(GL_CULL_FACE));
-        else     GL(Disable(GL_CULL_FACE));
-        if(stenciltest) GL(Enable(GL_STENCIL_TEST));
-        else            GL(Disable(GL_STENCIL_TEST));
-        GL(StencilMask( stencilmask ));
-        if(depthtest)   GL(Enable(GL_DEPTH_TEST));
-        else            GL(Disable(GL_DEPTH_TEST));
-        GL(DepthMask( depthmask ));
-        if(blend)       GL(Enable(GL_BLEND));
-        else            GL(Disable(GL_BLEND));
-        GL(BlendFunc(sfactor, dfactor));
-        GL(ColorMask( red,green,blue,alpha ));
-        GL(PrimitiveRestartIndex(primrestartid));
-        if(primrestart) GL(Enable(GL_PRIMITIVE_RESTART));
-        else            GL(Disable(GL_PRIMITIVE_RESTART));
+        glPolygonMode(GL_FRONT_AND_BACK, mode[0]);
+        //glPolygonMode(GL_BACK, mode[1]); deprecated in Core GL !!!!!!
+        if(cull) glEnable(GL_CULL_FACE);
+        else     glDisable(GL_CULL_FACE);
+        if(stenciltest) glEnable(GL_STENCIL_TEST);
+        else            glDisable(GL_STENCIL_TEST);
+        glStencilMask( stencilmask );
+        if(depthtest)   glEnable(GL_DEPTH_TEST);
+        else            glDisable(GL_DEPTH_TEST);
+        glDepthMask( depthmask );
+        if(blend)       glEnable(GL_BLEND);
+        else            glDisable(GL_BLEND);
+        glBlendFunc(sfactor, dfactor);
+        glColorMask( red,green,blue,alpha );
+        glPrimitiveRestartIndex(primrestartid);
+        if(primrestart) glEnable(GL_PRIMITIVE_RESTART);
+        else            glDisable(GL_PRIMITIVE_RESTART);
         for(int i=0; i<maxVtxAttribs; i++)
         {
             if(attribs[i].enabled)
-                GL(EnableVertexAttribArray(i));
+                glEnableVertexAttribArray(i);
             else
-                GL(DisableVertexAttribArray(i));
-            GL(BindBuffer(GL_ARRAY_BUFFER, attribs[i].bufferBinding));
-            GL(VertexAttribPointer(i, attribs[i].size, attribs[i].type, attribs[i].normalized, attribs[i].stride, attribs[i].ptr));
+                glDisableVertexAttribArray(i);
+            glBindBuffer(GL_ARRAY_BUFFER, attribs[i].bufferBinding);
+            glVertexAttribPointer(i, attribs[i].size, attribs[i].type, attribs[i].normalized, attribs[i].stride, attribs[i].ptr);
 #ifdef USE_INSTANCED_ARRAYS
-            GL(VertexAttribDivisor(i, attribs[i].divisor));
+            glVertexAttribDivisor(i, attribs[i].divisor);
 #endif
         }
-        GL(BindBuffer(GL_ARRAY_BUFFER, 0));
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
         // TODO: texture
     }
     void setStates()
     {
         // fill mode always
-        GL(PolygonMode(GL_FRONT_AND_BACK, GL_FILL));
-        GL(Disable( GL_CULL_FACE ));
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDisable( GL_CULL_FACE );
         // Stencil / Depth buffer and test disabled
-        GL(Disable(GL_STENCIL_TEST));
-        GL(StencilMask( 0 ));
-        GL(Disable(GL_DEPTH_TEST));
-        GL(DepthMask( GL_FALSE ));
+        glDisable(GL_STENCIL_TEST);
+        glStencilMask( 0 );
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask( GL_FALSE );
         // Blend on for alpha
-        GL(Enable(GL_BLEND));
-        GL(BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         // Color active
-        GL(ColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ));
-        GL(PrimitiveRestartIndex(-1));
-        GL(Enable(GL_PRIMITIVE_RESTART));
+        glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
+        glPrimitiveRestartIndex(-1);
+        glEnable(GL_PRIMITIVE_RESTART);
     }
     bool    valid;
     int     maxVtxAttribs;
@@ -233,27 +232,27 @@ inline GLuint OpenGLText::CompileGLSLShader( GLenum target, const char* shader)
 {
     GLuint object;
 
-    object = GL(CreateShader( target));
+    object = glCreateShader( target);
 
     if (!object)
         return object;
 
-    GL(ShaderSource( object, 1, &shader, NULL));
+    glShaderSource( object, 1, &shader, NULL);
 
-    GL(CompileShader(object));
+    glCompileShader(object);
 
     // check if shader compiled
     GLint compiled = 0;
-    GL(GetShaderiv(object, GL_COMPILE_STATUS, &compiled));
+    glGetShaderiv(object, GL_COMPILE_STATUS, &compiled);
 
     if (!compiled)
     {
 #ifdef NV_REPORT_COMPILE_ERRORS
         char temp[256] = "";
-        GL(GetShaderInfoLog( object, 256, NULL, temp));
+        glGetShaderInfoLog( object, 256, NULL, temp);
         fprintf( stderr, "Compile failed:\n%s\n", temp);
 #endif
-        GL(DeleteShader( object));
+        glDeleteShader( object);
         return 0;
     }
 
@@ -263,18 +262,18 @@ inline GLuint OpenGLText::CompileGLSLShader( GLenum target, const char* shader)
 // Create a program composed of vertex and fragment shaders.
 inline GLuint OpenGLText::LinkGLSLProgram( GLuint vertexShader, GLuint fragmentShader)
 {
-    GLuint program = GL(CreateProgram());
-    GL(AttachShader(program, vertexShader));
-    GL(AttachShader(program, fragmentShader));
-    GL(LinkProgram(program));
+    GLuint program = glCreateProgram();
+    glAttachShader(program, vertexShader);
+    glAttachShader(program, fragmentShader);
+    glLinkProgram(program);
 
 #ifdef NV_REPORT_COMPILE_ERRORS
     // Get error log.
     GLint charsWritten, infoLogLength;
-    GL(GetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength));
+    glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
 
     char * infoLog = new char[infoLogLength];
-    GL(GetProgramInfoLog(program, infoLogLength, &charsWritten, infoLog));
+    glGetProgramInfoLog(program, infoLogLength, &charsWritten, infoLog);
     if(infoLogLength > 0)
         fprintf( stderr, "Link failed:\n%s\n", infoLog);
     delete [] infoLog;
@@ -282,11 +281,11 @@ inline GLuint OpenGLText::LinkGLSLProgram( GLuint vertexShader, GLuint fragmentS
 
     // Test linker result.
     GLint linkSucceed = GL_FALSE;
-    GL(GetProgramiv(program, GL_LINK_STATUS, &linkSucceed));
+    glGetProgramiv(program, GL_LINK_STATUS, &linkSucceed);
     
     if (linkSucceed == GL_FALSE)
     {
-        GL(DeleteProgram(program));
+        glDeleteProgram(program);
         return 0;
     }
 
@@ -435,18 +434,18 @@ bool OpenGLText::init(unsigned char *imageData, FileHeader *glyphInfos_, int w, 
     allocated = false;
 
     if(m_fontTex == 0)
-        GL(GenTextures( 1, &m_fontTex ));
-    GL(ActiveTexture( GL_TEXTURE0 ));
-    GL(BindTexture( GL_TEXTURE_2D, m_fontTex ));
-    GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
-    GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
-    GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-    GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+        glGenTextures( 1, &m_fontTex );
+    glActiveTexture( GL_TEXTURE0 );
+    glBindTexture( GL_TEXTURE_2D, m_fontTex );
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     GLenum extFmt = GL_RED;
-    GL(TexImage2D(GL_TEXTURE_2D, 0, extFmt, glyphInfos->texwidth, glyphInfos->texheight, 0, extFmt, GL_UNSIGNED_BYTE, imageData));
-    GLenum err = GL(GetError());
+    glTexImage2D(GL_TEXTURE_2D, 0, extFmt, glyphInfos->texwidth, glyphInfos->texheight, 0, extFmt, GL_UNSIGNED_BYTE, imageData);
+    GLenum err = glGetError();
 
-    GL(BindTexture( GL_TEXTURE_2D, 0 ));
+    glBindTexture( GL_TEXTURE_2D, 0 );
     return init(w,h);
 }
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -481,13 +480,13 @@ bool OpenGLText::init(const char * fontName, int w, int h)
             int h = fontTGA->m_nImageHeight;
 
             if(m_fontTex == 0)
-                GL(GenTextures( 1, &m_fontTex ));
-            GL(ActiveTexture( GL_TEXTURE0 ));
-            GL(BindTexture( GL_TEXTURE_2D, m_fontTex ));
-            GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
-            GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
-            GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-            GL(TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+                glGenTextures( 1, &m_fontTex );
+            glActiveTexture( GL_TEXTURE0 );
+            glBindTexture( GL_TEXTURE_2D, m_fontTex );
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             GLenum extFmt;
             switch(fontTGA->m_texFormat)
             {
@@ -501,10 +500,10 @@ bool OpenGLText::init(const char * fontName, int w, int h)
                 extFmt = GL_LUMINANCE;
                 break;
             }
-            GL(TexImage2D(GL_TEXTURE_2D, 0, extFmt, u, h, 0, extFmt, GL_UNSIGNED_BYTE, fontTGA->m_nImageData));
-            GLenum err = GL(GetError());
+            glTexImage2D(GL_TEXTURE_2D, 0, extFmt, u, h, 0, extFmt, GL_UNSIGNED_BYTE, fontTGA->m_nImageData);
+            GLenum err = glGetError();
 
-            GL(BindTexture( GL_TEXTURE_2D, 0 ));
+            glBindTexture( GL_TEXTURE_2D, 0 );
         }
         delete fontTGA;
     }
@@ -518,7 +517,7 @@ bool OpenGLText::init(int w, int h)
     if (m_widgetProgram == 0)
     {
         //#if defined(NV_WINDOWS)
-        //#define GET_PROC_ADDRESS(name)          GL(GetProcAddress(name))
+        //#define GET_PROC_ADDRESS(name)          glGetProcAddress(name)
         //#elif defined(NV_MACINTOSH_OSX)
         //#define GET_PROC_ADDRESS(name)          dlsym(RTLD_NEXT, name)
         //#elif defined(NV_LINUX)
@@ -568,39 +567,39 @@ bool OpenGLText::init(int w, int h)
         m_widgetProgram = LinkGLSLProgram( m_vShader, m_fShader );
         //CHECKGLERRORS();
 
-        GLint fontTexLoc = GL(GetUniformLocation(m_widgetProgram, "fontTex"));
-        m_canvasVar     = GL(GetUniformLocation( m_widgetProgram, "canvas" ));
-        GL(UseProgram(m_widgetProgram));
+        GLint fontTexLoc = glGetUniformLocation(m_widgetProgram, "fontTex");
+        m_canvasVar     = glGetUniformLocation( m_widgetProgram, "canvas" );
+        glUseProgram(m_widgetProgram);
         {
-            GL(Uniform1i(fontTexLoc, 0)); //Texture unit 0 is for font Tex.
+            glUniform1i(fontTexLoc, 0); //Texture unit 0 is for font Tex.
         }
-        GL(UseProgram(0));
+        glUseProgram(0);
 
-        locTc  = GL(GetAttribLocation( m_widgetProgram, "TexCoord" ));
-        locCol = GL(GetAttribLocation( m_widgetProgram, "Color" ));
-        locPos = GL(GetAttribLocation( m_widgetProgram, "Position" ));
+        locTc  = glGetAttribLocation( m_widgetProgram, "TexCoord" );
+        locCol = glGetAttribLocation( m_widgetProgram, "Color" );
+        locPos = glGetAttribLocation( m_widgetProgram, "Position" );
         glGenBuffers(1, &m_vbo);
 #ifdef USEFONTMETRICASUBO
         // Upload the font metric in a UBO
         float *tcs = new float[256*4];
         for(int i=0; i<256; i++)
         {
-            tcs[4*i+0] = glyphInfos->glyphs[66].norm.u;
-            tcs[4*i+1] = glyphInfos->glyphs[66].norm.v;
-            tcs[4*i+2] = glyphInfos->glyphs[66].norm.width;
-            tcs[4*i+3] = glyphInfos->glyphs[66].norm.height;
+            tcs[4*i+0] = glyphInfos->glyphs['H'].norm.u;
+            tcs[4*i+1] = glyphInfos->glyphs['H'].norm.v;
+            tcs[4*i+2] = glyphInfos->glyphs['H'].norm.width;
+            tcs[4*i+3] = glyphInfos->glyphs['H'].norm.height;
         }
         glGenBuffers(1, &m_boTexLocation);
-        GL(BindBuffer( GL_UNIFORM_BUFFER, m_boTexLocation ));
-        GL(BufferData(GL_UNIFORM_BUFFER, 256*4*sizeof(float), tcs, GL_STATIC_DRAW));
+        glBindBuffer( GL_UNIFORM_BUFFER, m_boTexLocation );
+        glBufferData(GL_UNIFORM_BUFFER, 256*4*sizeof(float), tcs, GL_STATIC_DRAW);
         m_TexLocation = glGetUniformBlockIndex(m_widgetProgram, "TexLocation");
         GLint blockSize; // for debug purpose...
         glGetActiveUniformBlockiv(m_widgetProgram, m_TexLocation, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize);
-        GL(UseProgram(m_widgetProgram));
+        glUseProgram(m_widgetProgram);
         {
             glBindBufferBase( GL_UNIFORM_BUFFER, m_TexLocation, m_boTexLocation );
         }
-        GL(UseProgram(0));
+        glUseProgram(0);
         delete [] tcs;
 #endif
     }
@@ -631,49 +630,49 @@ void OpenGLText::endString()
     if(!m_vertices.empty())
     {
         bs.setStates();
-        GL(BindBuffer( GL_ARRAY_BUFFER, m_vbo ));
+        glBindBuffer( GL_ARRAY_BUFFER, m_vbo );
         // Note: we could also downsize the buffer if the size is really smaller than the one currently allocated
         // this could be done after few iterations, if we see that the size if still smaller than the allocation...
         if(m_vbosz < m_vertices.size())
         {
-            GL(BufferData(GL_ARRAY_BUFFER, m_vertices.size()*sizeof(Vertex), &(m_vertices.front()), GL_STREAM_DRAW));
+            glBufferData(GL_ARRAY_BUFFER, m_vertices.size()*sizeof(Vertex), &(m_vertices.front()), GL_STREAM_DRAW);
             m_vbosz = m_vertices.size();
         } else
-            GL(BufferSubData(GL_ARRAY_BUFFER, 0, m_vertices.size()*sizeof(Vertex), &(m_vertices.front())));
+            glBufferSubData(GL_ARRAY_BUFFER, 0, m_vertices.size()*sizeof(Vertex), &(m_vertices.front()));
 
-        GL(EnableVertexAttribArray( locPos ));
-        GL(EnableVertexAttribArray( locTc ));
-        GL(EnableVertexAttribArray( locCol ));
+        glEnableVertexAttribArray( locPos );
+        glEnableVertexAttribArray( locTc );
+        glEnableVertexAttribArray( locCol );
 
         static Vertex* pVtxOffset = NULL;
-        GL(VertexAttribPointer( locPos, 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->pos ));
-        GL(VertexAttribPointer( locTc , 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->tc ));
-        GL(VertexAttribPointer( locCol, 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->color ));
+        glVertexAttribPointer( locPos, 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->pos );
+        glVertexAttribPointer( locTc , 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->tc );
+        glVertexAttribPointer( locCol, 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->color );
 
 #ifdef USE_INSTANCED_ARRAYS
-        GL(VertexAttribDivisor(locPos, 4));
-        GL(VertexAttribDivisor(locTc, 4));
-        GL(VertexAttribDivisor(locCol, 4));
+        glVertexAttribDivisor(locPos, 4);
+        glVertexAttribDivisor(locTc, 4);
+        glVertexAttribDivisor(locCol, 4);
 #endif
 
-        //GL(ActiveTexture( GL_TEXTURE0 ));
-        GL(BindTexture(GL_TEXTURE_2D, m_fontTex));
+        //glActiveTexture( GL_TEXTURE0 );
+        glBindTexture(GL_TEXTURE_2D, m_fontTex);
 
-        GL(UseProgram( m_widgetProgram ));
-        GL(Uniform4f( m_canvasVar, m_canvas.w, m_canvas.h, m_canvas.ratio, 0 ));
+        glUseProgram( m_widgetProgram );
+        glUniform4f( m_canvasVar, m_canvas.w, m_canvas.h, m_canvas.ratio, 0 );
 
 #ifdef USE_INSTANCED_ARRAYS
         glDrawArraysInstanced( GL_QUADS, 0, 4, m_vbosz*4);
 #else
-        GL(DrawArrays( GL_QUADS, 0, m_vbosz));
+        glDrawArrays( GL_QUADS, 0, m_vbosz);
 #endif
 
-        GL(UseProgram( 0 ));
+        glUseProgram( 0 );
 
         // switch vertex attribs back off
-        GL(DisableVertexAttribArray( locPos ));
-        GL(DisableVertexAttribArray( locTc ));
-        GL(DisableVertexAttribArray( locCol ));
+        glDisableVertexAttribArray( locPos );
+        glDisableVertexAttribArray( locTc );
+        glDisableVertexAttribArray( locCol );
         //CHECKGLERRORS();
         m_vertices.resize(0);
     }
