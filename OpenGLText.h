@@ -112,6 +112,10 @@ private:
     int                 m_indexOffset;
     unsigned int        m_vbo;
     unsigned int        m_vbosz;
+#ifdef USEFONTMETRICASUBO
+    unsigned int        m_TexLocation;
+    unsigned int        m_boTexLocation;
+#endif
     struct TCanvas
     {
         float w,h;

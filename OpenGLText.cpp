@@ -30,6 +30,7 @@
         oglText.endString(); // will render the whole at once
 */
 #define USE_INSTANCED_ARRAYS
+//#define USEFONTMETRICASUBO // I have a bug, here...
 #define NV_REPORT_COMPILE_ERRORS
 
 #pragma warning(disable:4244) // dble to float conversion warning
@@ -201,6 +202,10 @@ OpenGLText::OpenGLText()
     m_vShader               = 0;
     m_fShader               = 0;
     m_vbo                   = 0;
+#ifdef USEFONTMETRICASUBO
+    m_boTexLocation          = 0;
+    m_TexLocation           = 0;
+#endif
     m_vbosz                 = 0;
     m_canvasVar             = 0;
     m_fontTex               = 0;
@@ -293,10 +298,14 @@ inline GLuint OpenGLText::LinkGLSLProgram( GLuint vertexShader, GLuint fragmentS
 //
 #ifdef USE_INSTANCED_ARRAYS
 char* OpenGLText::cWidgetVSSource2 = {
-    "#version 130\n\
-    uniform vec4 canvas; \n\
-\n\
-    in vec4 Position;\n\
+    "#version 140\n\
+    uniform vec4 canvas; \n"
+#ifdef USEFONTMETRICASUBO
+    "layout(std140) uniform TexLocation { \n\
+        vec4 texlocation[256];\n\
+    };\n"
+#endif
+   "in vec4 Position;\n\
     in vec4 TexCoord;\n\
     in vec4 Color;\n\
     out vec2 vsTC;\n\
@@ -313,12 +322,24 @@ char* OpenGLText::cWidgetVSSource2 = {
         if ((id & 3)==1) { p.x += w; }\n\
         else if ((id & 3)==2) { p.x += w; p.y += h; }\n\
         else if ((id & 3)==3) { p.y += h; }\n\
-        \
-        x = TexCoord.x;\n\
+        \n"
+#ifdef USEFONTMETRICASUBO
+        "int g = int(Color.w);\n\
+        //x = 0.175781250;//texlocation[g].u;\n\
+        //y = 0.00161550893;//texlocation[g].v;\n\
+        //w = 0.15234375;//texlocation[g].w;\n\
+        //h = 0.0726979002;//texlocation[g].h;\n\
+        x = texlocation[0].x;\n\
+        y = texlocation[0].y;\n\
+        w = texlocation[0].z;\n\
+        h = texlocation[0].w;\n"
+#else
+       "x = TexCoord.x;\n\
         y = TexCoord.y;\n\
         w = TexCoord[2];\n\
-        h = TexCoord[3];\n\
-        vec2 tc = vec2(x,y);\n\
+        h = TexCoord[3];\n"
+#endif
+       "vec2 tc = vec2(x,y);\n\
         if ((id & 3)==1) { tc.x += w; }\n\
         else if ((id & 3)==2) { tc.x += w; tc.y += h; }\n\
         else if ((id & 3)==3) { tc.y += h; }\n\
@@ -326,12 +347,12 @@ char* OpenGLText::cWidgetVSSource2 = {
         gl_Position = vec4( ((p.x / canvas.x)*canvas.z*2.0 - 1.0), \n\
                             ((p.y / canvas.y)*2.0 - 1.0), 0, 1.0); \n\
         vsTC    = tc; \n\
-        vsColor = Color; \n\
+        vsColor = vec4(Color.xyz, 1); \n\
     }\n\
     "};
 
 char* OpenGLText::cWidgetFSSource2 = {
-    "#version 130\n\
+    "#version 140\n\
     uniform sampler2D fontTex;\n\
     in vec2 vsTC;\n\
     in vec4 vsColor;\n\
@@ -559,6 +580,29 @@ bool OpenGLText::init(int w, int h)
         locCol = GL(GetAttribLocation( m_widgetProgram, "Color" ));
         locPos = GL(GetAttribLocation( m_widgetProgram, "Position" ));
         glGenBuffers(1, &m_vbo);
+#ifdef USEFONTMETRICASUBO
+        // Upload the font metric in a UBO
+        float *tcs = new float[256*4];
+        for(int i=0; i<256; i++)
+        {
+            tcs[4*i+0] = glyphInfos->glyphs[66].norm.u;
+            tcs[4*i+1] = glyphInfos->glyphs[66].norm.v;
+            tcs[4*i+2] = glyphInfos->glyphs[66].norm.width;
+            tcs[4*i+3] = glyphInfos->glyphs[66].norm.height;
+        }
+        glGenBuffers(1, &m_boTexLocation);
+        GL(BindBuffer( GL_UNIFORM_BUFFER, m_boTexLocation ));
+        GL(BufferData(GL_UNIFORM_BUFFER, 256*4*sizeof(float), tcs, GL_STATIC_DRAW));
+        m_TexLocation = glGetUniformBlockIndex(m_widgetProgram, "TexLocation");
+        GLint blockSize; // for debug purpose...
+        glGetActiveUniformBlockiv(m_widgetProgram, m_TexLocation, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize);
+        GL(UseProgram(m_widgetProgram));
+        {
+            glBindBufferBase( GL_UNIFORM_BUFFER, m_TexLocation, m_boTexLocation );
+        }
+        GL(UseProgram(0));
+        delete [] tcs;
+#endif
     }
     return true;
 }
@@ -731,6 +775,8 @@ void OpenGLText::drawString( int x, int y, const char * text, int nbLines, float
 #ifdef USE_INSTANCED_ARRAYS
             v.setPos( pX ,             pY,                  g.pix.width,     g.pix.height);
             v.setTC ( g.norm.u,        g.norm.v,            g.norm.width,    g.norm.height);
+            // to find back the Texture coords in atlas
+            v.color[3] = (float)('B');
             pushVertex(&v);
 #else
 
