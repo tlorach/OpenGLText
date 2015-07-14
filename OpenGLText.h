@@ -110,8 +110,8 @@ private:
     unsigned int        m_vbo;
     unsigned int        m_vbosz;
 #ifdef USEFONTMETRICASUBO
-    unsigned int        m_TexLocation;
-    unsigned int        m_boTexLocation;
+    unsigned int        m_GlyphTexOffset;
+    unsigned int        m_boGlyphTexOffset;
 #else
     unsigned int        locTc;
 #endif

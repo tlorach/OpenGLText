@@ -203,8 +203,8 @@ OpenGLText::OpenGLText()
     m_fShader               = 0;
     m_vbo                   = 0;
 #ifdef USEFONTMETRICASUBO
-    m_boTexLocation          = 0;
-    m_TexLocation           = 0;
+    m_boGlyphTexOffset      = 0;
+    m_GlyphTexOffset        = 0;
 #endif
     m_vbosz                 = 0;
     m_canvasVar             = 0;
@@ -275,7 +275,7 @@ inline GLuint OpenGLText::LinkGLSLProgram( GLuint vertexShader, GLuint fragmentS
 
     char * infoLog = new char[infoLogLength];
     glGetProgramInfoLog(program, infoLogLength, &charsWritten, infoLog);
-    if(infoLogLength > 0)
+    if((infoLogLength > 0)&&(infoLog[0] != '\0'))
         fprintf( stderr, "Link failed:\n%s\n", infoLog);
     delete [] infoLog;
 #endif
@@ -301,10 +301,10 @@ char* OpenGLText::cWidgetVSSource2 = {
     "#version 140\n\
     uniform vec4 canvas; \n"
 #ifdef USEFONTMETRICASUBO
-    "layout(std140) uniform TexLocation { \n\
-        vec4 texlocation[256]; // Bugged !!\n\
+    "layout(std140) uniform GlyphTexOffset { \n\
+        vec4 glyphTexOffset[256]; // Bugged !!\n\
     };\n"
-    "uniform vec4 texlocation2[256]; // Working\n"
+    "uniform vec4 glyphTexOffset2[256]; // Working\n"
 #else
    "in vec4 TexCoord;\n"
 #endif
@@ -327,10 +327,10 @@ char* OpenGLText::cWidgetVSSource2 = {
         \n"
 #ifdef USEFONTMETRICASUBO
        "int g = int(Color.w);\n\
-        x = texlocation2[g].x;\n\
-        y = texlocation2[g].y;\n\
-        w = texlocation2[g].z;\n\
-        h = texlocation2[g].w;\n"
+        x = glyphTexOffset2[g].x;\n\
+        y = glyphTexOffset2[g].y;\n\
+        w = glyphTexOffset2[g].z;\n\
+        h = glyphTexOffset2[g].w;\n"
 #else
        "x = TexCoord.x;\n\
         y = TexCoord.y;\n\
@@ -586,22 +586,21 @@ bool OpenGLText::init(int w, int h)
             tcs[(4*i)+3] = glyphInfos->glyphs[i].norm.height;
         }
         
-        glGenBuffers(1, &m_boTexLocation);
-        glBindBuffer( GL_UNIFORM_BUFFER, m_boTexLocation );
+        glGenBuffers(1, &m_boGlyphTexOffset);
+        glBindBuffer( GL_UNIFORM_BUFFER, m_boGlyphTexOffset );
         glBufferData(GL_UNIFORM_BUFFER, 256*4*sizeof(float), tcs, GL_STATIC_DRAW);
-        glUseProgram(m_widgetProgram);
-        {
-            // BUG HERE...
-            m_TexLocation = glGetUniformBlockIndex(m_widgetProgram, "TexLocation");
-            GLint blockSize; // for debug purpose...
-            glGetActiveUniformBlockiv(m_widgetProgram, m_TexLocation, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize);
-            assert(blockSize == 256*4*sizeof(float));
-            glBindBufferBase( GL_UNIFORM_BUFFER, m_TexLocation, m_boTexLocation );
-            // This one is working
-            int ll = glGetUniformLocation( m_widgetProgram, "texlocation2" );
-            glUniform4fv(ll, 256, tcs);
-        }
-        glUseProgram(0);
+        // BUG HERE...
+        m_GlyphTexOffset = glGetUniformBlockIndex(m_widgetProgram, "GlyphTexOffset");
+        // we must bind this block index to our own number... yeah... let's take the same
+        // http://www.opengl.org/sdk/docs/man4/xhtml/glUniformBlockBinding.xml
+        glUniformBlockBinding(m_widgetProgram, m_GlyphTexOffset, m_GlyphTexOffset);
+        GLint blockSize; // for debug purpose...
+        glGetActiveUniformBlockiv(m_widgetProgram, m_GlyphTexOffset, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize);
+        //assert(blockSize == 256*4*sizeof(float));
+        glBindBufferBase( GL_UNIFORM_BUFFER, m_GlyphTexOffset, m_boGlyphTexOffset );
+        // This one is working
+        int glyphTexOffset2 = glGetUniformLocation( m_widgetProgram, "glyphTexOffset2" );
+        glProgramUniform4fv(m_widgetProgram, glyphTexOffset2, 256, tcs);
         delete [] tcs;
 #else
         locTc  = glGetAttribLocation( m_widgetProgram, "TexCoord" );
