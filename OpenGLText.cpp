@@ -30,7 +30,9 @@
         oglText.endString(); // will render the whole at once
 */
 #define USE_INSTANCED_ARRAYS
-#define USEFONTMETRICASUBO // I have a bug, here...
+#ifdef USE_INSTANCED_ARRAYS
+#   define USEFONTMETRICASUBO // I have a bug, here...
+#endif
 #define NV_REPORT_COMPILE_ERRORS
 
 #pragma warning(disable:4244) // dble to float conversion warning
@@ -208,6 +210,7 @@ OpenGLText::OpenGLText()
 #endif
     m_vbosz                 = 0;
     m_canvasVar             = 0;
+    m_color                 = 0;
     m_fontTex               = 0;
     m_vertexDepth           = 1.f;
     m_indexOffset           = 0;
@@ -309,24 +312,27 @@ char* OpenGLText::cWidgetVSSource2 = {
    "in vec4 TexCoord;\n"
 #endif
    "in vec4 Position;\n"
-   "in vec4 Color;\n\
+   "in int Glyph;\n\
     out vec2 vsTC;\n\
-    out vec4 vsColor;\n\
 \n\
     void main()\n\
     {\n\
-        int id = gl_VertexID;\n\
+        int id = gl_VertexID % 6;\n\
         float x = Position.x;\n\
         float y = Position.y;\n\
         float w = Position[2];\n\
         float h = Position[3];\n\
         vec4 p = vec4(x,y,0,1);\n\
-        if ((id & 3)==1) { p.x += w; }\n\
-        else if ((id & 3)==2) { p.x += w; p.y += h; }\n\
-        else if ((id & 3)==3) { p.y += h; }\n\
-        \n"
+        switch(id) {\n\
+        case 0: break;\n\
+        case 3:\n\
+        case 1: p.x += w; break;\n\
+        case 5:\n\
+        case 2: p.y += h; break;\n\
+        case 4: p.x += w; p.y += h; break; \n\
+        }\n"
 #ifdef USEFONTMETRICASUBO
-       "int g = int(Color.w);\n\
+       "int g = int(Glyph);\n\
         x = glyphTexOffset2[g].x;\n\
         y = glyphTexOffset2[g].y;\n\
         w = glyphTexOffset2[g].z;\n\
@@ -338,68 +344,63 @@ char* OpenGLText::cWidgetVSSource2 = {
         h = TexCoord[3];\n"
 #endif
        "vec2 tc = vec2(x,y);\n\
-        if ((id & 3)==1) { tc.x += w; }\n\
-        else if ((id & 3)==2) { tc.x += w; tc.y += h; }\n\
-        else if ((id & 3)==3) { tc.y += h; }\n\
-        \
+        switch(id) {\n\
+        case 0: break;\n\
+        case 3:\n\
+        case 1: tc.x += w; break;\n\
+        case 5:\n\
+        case 2: tc.y += h; break;\n\
+        case 4: tc.x += w; tc.y += h; break; \n\
+        }\n\
         gl_Position = vec4( ((p.x / canvas.x)*canvas.z*2.0 - 1.0), \n\
                             ((p.y / canvas.y)*2.0 - 1.0), 0, 1.0); \n\
         vsTC    = tc; \n\
-        vsColor = vec4(Color.xyz, 1); \n\
     }\n\
     "};
 
 char* OpenGLText::cWidgetFSSource2 = {
     "#version 140\n\
+    uniform vec4 color; \n\
     uniform sampler2D fontTex;\n\
     in vec2 vsTC;\n\
-    in vec4 vsColor;\n\
     out vec4 fragColor;\n\
 \n\
     void main()\n\
     {\n\
-        vec4 color; \n\
-        float distance = (texture2D( fontTex, vsTC ).x); \n\
-        color = vsColor;\n\
-        color.a *= distance;\n\
-        fragColor = color; \n\
+        float distance = (texture2D( fontTex, vsTC.xy ).x); \n\
+        fragColor.rgb = color.rgb; \n\
+        fragColor.a = color.a * distance;\n\
     }\n\
     "};
 #else
 char* OpenGLText::cWidgetVSSource2 = {
-    "#version 130\n\
+    "#version 140\n\
     uniform vec4 canvas; \n\
 \n\
     in vec4 Position;\n\
     in vec4 TexCoord;\n\
-    in vec4 Color;\n\
     out vec2 vsTC;\n\
-    out vec4 vsColor;\n\
 \n\
     void main()\n\
     {\n\
         gl_Position = vec4( (((Position.x) / canvas.x)*canvas.z*2.0 - 1.0), \n\
                    (((Position.y) / canvas.y)*2.0 - 1.0), 0, 1.0); \n\
         vsTC = TexCoord.xy; \n\
-        vsColor = Color; \n\
     }\n\
     "};
 
 char* OpenGLText::cWidgetFSSource2 = {
-    "#version 130\n\
+    "#version 140\n\
+    uniform vec4 color; \n\
     uniform sampler2D fontTex;\n\
     in vec2 vsTC;\n\
-    in vec4 vsColor;\n\
     out vec4 fragColor;\n\
 \n\
     void main()\n\
     {\n\
-        vec2 texUV = vsTC; \n\
-        vec4 color; \n\
-        float distance = (texture2D( fontTex, texUV.xy ).x); \n\
-        color = vsColor;\n\
-        color.a *= distance;\n\
-        fragColor = color; \n\
+        float distance = (texture2D( fontTex, vsTC.xy ).x); \n\
+        fragColor.rgb = color.rgb; \n\
+        fragColor.a = color.a * distance;\n\
     }\n\
     "};
 #endif
@@ -434,17 +435,13 @@ bool OpenGLText::init(unsigned char *imageData, FileHeader *glyphInfos_, int w, 
 
     if(m_fontTex == 0)
         glGenTextures( 1, &m_fontTex );
-    glActiveTexture( GL_TEXTURE0 );
-    glBindTexture( GL_TEXTURE_2D, m_fontTex );
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     GLenum extFmt = GL_RED;
-    glTexImage2D(GL_TEXTURE_2D, 0, extFmt, glyphInfos->texwidth, glyphInfos->texheight, 0, extFmt, GL_UNSIGNED_BYTE, imageData);
+    glTextureImage2DEXT(m_fontTex, GL_TEXTURE_2D, 0, extFmt, glyphInfos->texwidth, glyphInfos->texheight, 0, extFmt, GL_UNSIGNED_BYTE, imageData);
+    glTextureParameterf(m_fontTex, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTextureParameterf(m_fontTex, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTextureParameterf(m_fontTex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTextureParameterf(m_fontTex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     GLenum err = glGetError();
-
-    glBindTexture( GL_TEXTURE_2D, 0 );
     return init(w,h);
 }
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -480,12 +477,6 @@ bool OpenGLText::init(const char * fontName, int w, int h)
 
             if(m_fontTex == 0)
                 glGenTextures( 1, &m_fontTex );
-            glActiveTexture( GL_TEXTURE0 );
-            glBindTexture( GL_TEXTURE_2D, m_fontTex );
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             GLenum extFmt;
             switch(fontTGA->m_texFormat)
             {
@@ -499,10 +490,12 @@ bool OpenGLText::init(const char * fontName, int w, int h)
                 extFmt = GL_LUMINANCE;
                 break;
             }
-            glTexImage2D(GL_TEXTURE_2D, 0, extFmt, u, h, 0, extFmt, GL_UNSIGNED_BYTE, fontTGA->m_nImageData);
+            glTextureImage2DEXT(m_fontTex, GL_TEXTURE_2D, 0, extFmt, u, h, 0, extFmt, GL_UNSIGNED_BYTE, fontTGA->m_nImageData);
+            glTextureParameterf(m_fontTex, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTextureParameterf(m_fontTex, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTextureParameterf(m_fontTex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTextureParameterf(m_fontTex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             GLenum err = glGetError();
-
-            glBindTexture( GL_TEXTURE_2D, 0 );
         }
         delete fontTGA;
     }
@@ -515,45 +508,6 @@ bool OpenGLText::init(int w, int h)
     m_canvas.ratio = 1.0;
     if (m_widgetProgram == 0)
     {
-        //#if defined(NV_WINDOWS)
-        //#define GET_PROC_ADDRESS(name)          glGetProcAddress(name)
-        //#elif defined(NV_MACINTOSH_OSX)
-        //#define GET_PROC_ADDRESS(name)          dlsym(RTLD_NEXT, name)
-        //#elif defined(NV_LINUX)
-        //#define GET_PROC_ADDRESS(name)          glXGetProcAddressARB((GLubyte *) name)
-        //#endif
-        //#define INITGL(n)\
-        //    if(!gl##n)\
-        //    {\
-        //    gl##n = (PFN_##n)GET_PROC_ADDRESS("gl" #n);\
-        //    if(!gl##n) {\
-        //    PRINTF(("ERROR>> App queried " #n " - unsupported by driver\n"));\
-        //            return;\
-        //        }\
-        //    }
-        //INITGL(CreateShader);
-        //INITGL(ShaderSource);
-        //INITGL(CompileShader);
-        //INITGL(GetShaderiv);
-        //INITGL(DeleteShader);
-        //INITGL(CreateProgram);
-        //INITGL(AttachShader);
-        //INITGL(LinkProgram);
-        //INITGL(GetProgramiv);
-        //INITGL(GetProgramInfoLog);
-        //INITGL(UseProgram);
-        //INITGL(GetUniformLocation);
-        //INITGL(GetAttribLocation);
-        //INITGL(Uniform4fv);
-        //INITGL(Uniform4f);
-        //INITGL(Uniform1i);
-        //INITGL(ActiveTexture);
-        //INITGL(PrimitiveRestartIndex);
-        //INITGL(EnableVertexAttribArray);
-        //INITGL(DisableVertexAttribArray);
-        //INITGL(VertexAttribPointer);
-        //INITGL(BindBuffer);
-
         m_vShader = CompileGLSLShader( GL_VERTEX_SHADER, cWidgetVSSource2);
         if (!m_vShader) 
             fprintf(stderr, "Vertex shader compile failed\n");
@@ -566,13 +520,11 @@ bool OpenGLText::init(int w, int h)
         m_widgetProgram = LinkGLSLProgram( m_vShader, m_fShader );
         //CHECKGLERRORS();
 
-        GLint fontTexLoc = glGetUniformLocation(m_widgetProgram, "fontTex");
-        m_canvasVar     = glGetUniformLocation( m_widgetProgram, "canvas" );
-        glUseProgram(m_widgetProgram);
-        {
-            glUniform1i(fontTexLoc, 0); //Texture unit 0 is for font Tex.
-        }
-        glUseProgram(0);
+        GLint fontTexLoc = glGetUniformLocation( m_widgetProgram, "fontTex");
+        m_canvasVar      = glGetUniformLocation( m_widgetProgram, "canvas" );
+        m_color          = glGetUniformLocation( m_widgetProgram, "color" );
+
+        glProgramUniform1i(m_widgetProgram, fontTexLoc, 0); //Texture unit 0 is for font Tex.
 
         glGenBuffers(1, &m_vbo);
 #ifdef USEFONTMETRICASUBO
@@ -587,8 +539,7 @@ bool OpenGLText::init(int w, int h)
         }
         
         glGenBuffers(1, &m_boGlyphTexOffset);
-        glBindBuffer( GL_UNIFORM_BUFFER, m_boGlyphTexOffset );
-        glBufferData(GL_UNIFORM_BUFFER, 256*4*sizeof(float), tcs, GL_STATIC_DRAW);
+        glNamedBufferData(m_boGlyphTexOffset, 256*4*sizeof(float), tcs, GL_STATIC_DRAW);
         // BUG HERE...
         m_GlyphTexOffset = glGetUniformBlockIndex(m_widgetProgram, "GlyphTexOffset");
         // we must bind this block index to our own number... yeah... let's take the same
@@ -605,7 +556,9 @@ bool OpenGLText::init(int w, int h)
 #else
         locTc  = glGetAttribLocation( m_widgetProgram, "TexCoord" );
 #endif
-        locCol = glGetAttribLocation( m_widgetProgram, "Color" );
+#ifdef USE_INSTANCED_ARRAYS
+        locGlyph = glGetAttribLocation( m_widgetProgram, "Glyph" );
+#endif
         locPos = glGetAttribLocation( m_widgetProgram, "Position" );
     }
     return true;
@@ -635,44 +588,48 @@ void OpenGLText::endString()
     if(!m_vertices.empty())
     {
         bs.setStates();
-        glBindBuffer( GL_ARRAY_BUFFER, m_vbo );
         // Note: we could also downsize the buffer if the size is really smaller than the one currently allocated
         // this could be done after few iterations, if we see that the size if still smaller than the allocation...
         if(m_vbosz < m_vertices.size())
         {
-            glBufferData(GL_ARRAY_BUFFER, m_vertices.size()*sizeof(Vertex), &(m_vertices.front()), GL_STREAM_DRAW);
+            glBindBuffer( GL_ARRAY_BUFFER, m_vbo ); // ??!?!? otherewize it crashes
+            glNamedBufferData(m_vbo, m_vertices.size()*sizeof(Vertex), &(m_vertices.front()), GL_STREAM_DRAW);
+            glBindBuffer( GL_ARRAY_BUFFER, 0 );
             m_vbosz = m_vertices.size();
         } else
-            glBufferSubData(GL_ARRAY_BUFFER, 0, m_vertices.size()*sizeof(Vertex), &(m_vertices.front()));
-
+            glNamedBufferSubData(m_vbo, 0, m_vertices.size()*sizeof(Vertex), &(m_vertices.front()));
         static Vertex* pVtxOffset = NULL;
+        glVertexAttribFormat(locPos , 4, GL_FLOAT, GL_FALSE, (GLuint)pVtxOffset->pos);
+        glVertexAttribBinding(locPos, 1);
+#ifndef USEFONTMETRICASUBO
+        glVertexAttribFormat(locTc , 4, GL_FLOAT, GL_FALSE, (GLuint)pVtxOffset->tc);
+        glVertexAttribBinding(locTc, 1);
+#endif
+#ifdef USE_INSTANCED_ARRAYS
+        glVertexAttribIFormat(locGlyph, 1, GL_INT, (GLuint)&pVtxOffset->iattr);
+        glVertexAttribBinding(locGlyph, 1);
+        glVertexBindingDivisor(1, 6);
+#endif
+        // bind the VBO to the buffer binding #0
+        glBindVertexBuffer(1, m_vbo, 0, sizeof(Vertex));
+        // enable attributes to use
         glEnableVertexAttribArray( locPos );
-        glVertexAttribPointer( locPos, 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->pos );
 #ifndef USEFONTMETRICASUBO
         glEnableVertexAttribArray( locTc );
-        glVertexAttribPointer( locTc , 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->tc );
 #endif
-        glEnableVertexAttribArray( locCol );
-        glVertexAttribPointer( locCol, 4, GL_FLOAT, false, sizeof(Vertex), pVtxOffset->color );
-
 #ifdef USE_INSTANCED_ARRAYS
-        glVertexAttribDivisor(locPos, 4);
-#ifndef USEFONTMETRICASUBO
-        glVertexAttribDivisor(locTc, 4);
-#endif
-        glVertexAttribDivisor(locCol, 4);
+        glEnableVertexAttribArray( locGlyph );
 #endif
 
-        //glActiveTexture( GL_TEXTURE0 );
-        glBindTexture(GL_TEXTURE_2D, m_fontTex);
+        glBindTextureUnit(0, m_fontTex);
 
         glUseProgram( m_widgetProgram );
-        glUniform4f( m_canvasVar, m_canvas.w, m_canvas.h, m_canvas.ratio, 0 );
+        glProgramUniform4f( m_widgetProgram, m_canvasVar, m_canvas.w, m_canvas.h, m_canvas.ratio, 0 );
 
 #ifdef USE_INSTANCED_ARRAYS
-        glDrawArraysInstanced( GL_QUADS, 0, 4, m_vbosz*4);
+        glDrawArraysInstanced( GL_TRIANGLES, 0, 6, m_vbosz*6);
 #else
-        glDrawArrays( GL_QUADS, 0, m_vbosz);
+        glDrawArrays( GL_TRIANGLES, 0, m_vbosz);
 #endif
 
         glUseProgram( 0 );
@@ -682,7 +639,9 @@ void OpenGLText::endString()
 #ifndef USEFONTMETRICASUBO
         glDisableVertexAttribArray( locTc );
 #endif
-        glDisableVertexAttribArray( locCol );
+#ifdef USE_INSTANCED_ARRAYS
+        glDisableVertexAttribArray( locGlyph );
+#endif
         GLenum err = glGetError();
         //assert(err == 0);
         m_vertices.resize(0);
@@ -732,37 +691,37 @@ void OpenGLText::stringSize(const char *text, float *sz)
 ///////////////////////////////////////////////////////////////////////////////////////
 //
 //
-void OpenGLText::drawString( int x, int y, const char * text, int nbLines, unsigned long color)
+float OpenGLText::drawString( int x, int y, const char * text, int nbLines, unsigned long color)
 {
     float color4f[4];
     color4f[0] = (float)(color>>24 & 0xFF)/255.0;
     color4f[1] = (float)(color>>16 & 0xFF)/255.0;
     color4f[2] = (float)(color>>8 & 0xFF)/255.0;
     color4f[3] = (float)(color & 0xFF)/255.0;
-    drawString( x, y, text, nbLines, color4f);
+    return drawString( x, y, text, nbLines, color4f);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
 //
 //
-void OpenGLText::drawString( int x, int y, const char * text, int nbLines, float * color4f)
+float OpenGLText::drawString( int x, int y, const char * text, int nbLines, float * color4f)
 {
     if(!glyphInfos)
-        return;
+        return 0;
     int h = glyphInfos->pix.ascent + glyphInfos->pix.descent + glyphInfos->pix.linegap;
+    float usedHeight = 0;
     float lPosX = x+1;
     float lPosY = y ;
     if (nbLines > 1)
+    {
         lPosY +=  h * (nbLines - 1);
-
+    }
     float lLinePosX = lPosX;
     float lLinePosY = lPosY;
     const char* c = text;
     Vertex v;
-    v.color[0] = color4f[0];
-    v.color[1] = color4f[1];
-    v.color[2] = color4f[2];
-    v.color[3] = color4f[3];
+
+    glProgramUniform4fv(m_widgetProgram, m_color, 1, color4f);
  
     m_vertexDepth = 1.0;
     while (*c != '\0')
@@ -771,6 +730,7 @@ void OpenGLText::drawString( int x, int y, const char * text, int nbLines, float
         {
             lPosX = lLinePosX;
             lLinePosY -= h;
+            usedHeight += h;
             lPosY = lLinePosY; 
         }
         else if ( *c > 128 || *c < 0 )
@@ -786,7 +746,7 @@ void OpenGLText::drawString( int x, int y, const char * text, int nbLines, float
             v.setPos( pX ,             pY,                  g.pix.width,     g.pix.height);
             v.setTC ( g.norm.u,        g.norm.v,            g.norm.width,    g.norm.height);
             // to find back the Texture coords in atlas
-            v.color[3] = (float)(*c);
+            v.iattr = (*c);
             pushVertex(&v);
 #else
 
@@ -796,7 +756,13 @@ void OpenGLText::drawString( int x, int y, const char * text, int nbLines, float
             v.setPos( pX + g.pix.width ,     pY,                     0,1);
             v.setTC ( g.norm.u+g.norm.width, g.norm.v,               0,0);  
             pushVertex(&v);
-            v.setPos( pX + g.pix.width,     pY + g.pix.height,      0,1);
+            v.setPos( pX               ,     pY + g.pix.height,      0,1);
+            v.setTC ( g.norm.u,              g.norm.v+g.norm.height, 0,0);  
+            pushVertex(&v);
+            v.setPos( pX + g.pix.width ,     pY,                     0,1);
+            v.setTC ( g.norm.u+g.norm.width, g.norm.v,               0,0);  
+            pushVertex(&v);
+            v.setPos( pX + g.pix.width,      pY + g.pix.height,      0,1);
             v.setTC ( g.norm.u+g.norm.width, g.norm.v+g.norm.height, 0,0);           
             pushVertex(&v);
             v.setPos( pX,                    pY + g.pix.height,      0,1);
@@ -810,6 +776,7 @@ void OpenGLText::drawString( int x, int y, const char * text, int nbLines, float
         c++;
     }
     m_vertexDepth = 1.f;
+    return usedHeight;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////

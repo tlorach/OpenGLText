@@ -86,8 +86,8 @@ public:
     void beginString();
     void endString();
     void stringSize(const char *text, float *sz);
-    void drawString( int x, int y, const char * text, int nbLines, unsigned long color);
-    void drawString( int x, int y, const char * text, int nbLines, float * color4f);
+    float drawString( int x, int y, const char * text, int nbLines, unsigned long color);
+    float drawString( int x, int y, const char * text, int nbLines, float * color4f);
     bool init(const char * fontName, int w, int h);
     bool init(unsigned char *imageData, FileHeader *glyphInfos, int w, int h);
     void changeCanvas(int w, int h);
@@ -103,6 +103,7 @@ private:
     unsigned int        m_vShader;
     unsigned int        m_fShader;
     unsigned int        m_canvasVar;
+    unsigned int        m_color;
     unsigned int        m_depthNFRSVar;
     unsigned int        m_fontTex;
     float               m_vertexDepth;
@@ -116,7 +117,7 @@ private:
     unsigned int        locTc;
 #endif
     unsigned int        locPos;
-    unsigned int        locCol;
+    unsigned int        locGlyph;
     struct TCanvas
     {
         float w,h;
@@ -129,7 +130,7 @@ private:
     {
         float pos[4];
         float tc[4];
-        float color[4];
+        int   iattr;
 
         Vertex()
         { memset(this, 0, sizeof(Vertex)); }
