@@ -30,7 +30,7 @@
         oglText.endString(); // will render the whole at once
 */
 //#define USE_QUADS
-#define USE_INSTANCED_ARRAYS
+//#define USE_INSTANCED_ARRAYS
 #define NV_REPORT_COMPILE_ERRORS
 #ifdef USE_QUADS
 #   define TOPOLOGY_PRIM GL_QUADS
@@ -40,7 +40,7 @@
 #   define PRIMNUMBER 6
 #endif
 #ifdef USE_INSTANCED_ARRAYS
-//#   define USE_FONT_METRIC_AS_TBO // I have a bug, here...
+#   define USE_FONT_METRIC_AS_TBO // I have a bug, here...
 #endif
 
 #pragma warning(disable:4244) // dble to float conversion warning
