@@ -30,7 +30,7 @@
         oglText.endString(); // will render the whole at once
 */
 //#define USE_QUADS
-//#define USE_INSTANCED_ARRAYS
+#define USE_INSTANCED_ARRAYS
 #define NV_REPORT_COMPILE_ERRORS
 #ifdef USE_QUADS
 #   define TOPOLOGY_PRIM GL_QUADS
@@ -40,7 +40,7 @@
 #   define PRIMNUMBER 6
 #endif
 #ifdef USE_INSTANCED_ARRAYS
-#   define USEFONTMETRICASUBO // I have a bug, here...
+#   define USE_FONT_METRIC_AS_TBO // I have a bug, here...
 #endif
 
 #pragma warning(disable:4244) // dble to float conversion warning
@@ -81,7 +81,7 @@
 char* OpenGLText::cWidgetVSSource2 = {
    "#version 140\n\
     uniform vec4 canvas; \n"
-#ifdef USEFONTMETRICASUBO
+#ifdef USE_FONT_METRIC_AS_TBO
    "uniform samplerBuffer glyphTexOffset;\n"
 #else
    "in vec4 TexCoord;\n"
@@ -116,7 +116,7 @@ char* OpenGLText::cWidgetVSSource2 = {
         case 4: p.x += w; p.y += h; break; \n\
         }\n"
 #endif
-#ifdef USEFONTMETRICASUBO
+#ifdef USE_FONT_METRIC_AS_TBO
        "int g = int(Glyph);\n\
         vec4 ginfo = texelFetch(glyphTexOffset, g);\n\
         x = ginfo.x;\n\
@@ -335,7 +335,7 @@ OpenGLText::OpenGLText()
     m_vShader               = 0;
     m_fShader               = 0;
     m_vbo                   = 0;
-#ifdef USEFONTMETRICASUBO
+#ifdef USE_FONT_METRIC_AS_TBO
     m_boGlyphTexOffset      = 0;
     m_GlyphTexOffset        = 0;
 #endif
@@ -550,7 +550,7 @@ bool OpenGLText::init(int w, int h)
         glProgramUniform1i(m_widgetProgram, fontTexLoc, 0); //Texture unit 0 is for font Tex.
 
         glGenBuffers(1, &m_vbo);
-#ifdef USEFONTMETRICASUBO
+#ifdef USE_FONT_METRIC_AS_TBO
         // Upload the font metric in a TBO
         float *tcs = new float[256*4];
         for(int i=0; i<256; i++)
@@ -617,7 +617,7 @@ void OpenGLText::endString()
         static Vertex* pVtxOffset = NULL;
         glVertexAttribFormat(locPos , 4, GL_FLOAT, GL_FALSE, (GLuint)pVtxOffset->pos);
         glVertexAttribBinding(locPos, 1);
-#ifndef USEFONTMETRICASUBO
+#ifndef USE_FONT_METRIC_AS_TBO
         glVertexAttribFormat(locTc , 4, GL_FLOAT, GL_FALSE, (GLuint)pVtxOffset->tc);
         glVertexAttribBinding(locTc, 1);
 #endif
@@ -630,7 +630,7 @@ void OpenGLText::endString()
         glBindVertexBuffer(1, m_vbo, 0, sizeof(Vertex));
         // enable attributes to use
         glEnableVertexAttribArray( locPos );
-#ifndef USEFONTMETRICASUBO
+#ifndef USE_FONT_METRIC_AS_TBO
         glEnableVertexAttribArray( locTc );
 #endif
 #ifdef USE_INSTANCED_ARRAYS
@@ -654,7 +654,7 @@ void OpenGLText::endString()
 
         // switch vertex attribs back off
         glDisableVertexAttribArray( locPos );
-#ifndef USEFONTMETRICASUBO
+#ifndef USE_FONT_METRIC_AS_TBO
         glDisableVertexAttribArray( locTc );
 #endif
 #ifdef USE_INSTANCED_ARRAYS
