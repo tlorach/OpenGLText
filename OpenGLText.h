@@ -113,6 +113,7 @@ private:
 #ifdef USEFONTMETRICASUBO
     unsigned int        m_GlyphTexOffset;
     unsigned int        m_boGlyphTexOffset;
+    unsigned int        m_locGlyphTexOffset;
 #else
     unsigned int        locTc;
 #endif

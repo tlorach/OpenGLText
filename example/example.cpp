@@ -85,7 +85,7 @@ display() {
     oglText.beginString();
     oglText2.beginString();
 
-    oglText.drawString(10, g_height-100, "Hello World", 1, 0xFFFFFF80);
+    oglText.drawString(10, g_height-100, "Hello World", 1, 0xFFFFFF70);
 
     oglText2.drawString(10, g_height-180, 
         "There is a tide in the affairs of men, \n"
@@ -111,6 +111,7 @@ display() {
     oglText4.endString();
 
     glutSwapBuffers();
+    glutPostRedisplay();
 }
 
 //------------------------------------------------------------------------------
