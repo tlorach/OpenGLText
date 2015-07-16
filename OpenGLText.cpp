@@ -30,8 +30,9 @@
         oglText.endString(); // will render the whole at once
 */
 //#define USE_QUADS
-//#define USE_INSTANCED_ARRAYS
+#define USE_INSTANCED_ARRAYS
 #define NV_REPORT_COMPILE_ERRORS
+#define USE_PSEUDO_INSTANCING
 #ifdef USE_QUADS
 #   define TOPOLOGY_PRIM GL_QUADS
 #   define PRIMNUMBER 4
@@ -40,7 +41,11 @@
 #   define PRIMNUMBER 6
 #endif
 #ifdef USE_INSTANCED_ARRAYS
-#   define USE_FONT_METRIC_AS_TBO // I have a bug, here...
+#   define USE_FONT_METRIC_AS_TBO
+#endif
+#ifdef USE_PSEUDO_INSTANCING
+#   define USE_INSTANCED_ARRAYS
+#   define USE_FONT_METRIC_AS_TBO
 #endif
 
 #pragma warning(disable:4244) // dble to float conversion warning
@@ -86,26 +91,39 @@ char* OpenGLText::cWidgetVSSource2 = {
 #else
    "in vec4 TexCoord;\n"
 #endif
+#ifndef USE_PSEUDO_INSTANCING
    "in vec4 Position;\n"
-   "in int Glyph;\n\
-    out vec2 vsTC;\n\
+   "in int Glyph;\n"
+#else
+   "uniform samplerBuffer quads;\n"
+#endif
+   "out vec2 vsTC;\n\
 \n\
     void main()\n\
     {\n"
+#ifdef USE_PSEUDO_INSTANCING
 #ifdef USE_QUADS
-       "int id = gl_VertexID;\n"
+       "int i = gl_VertexID / 4;\n"
+#else
+       "int i = gl_VertexID / 6;\n"
+#endif
+       "vec4 Position = texelFetch(quads, i*2);\n"
+       "int  Glyph    = int(texelFetch(quads, i*2+1).x);\n"
+#endif
+#ifdef USE_QUADS
+       "int id = gl_VertexID & 3;\n"
 #else
        "int id = gl_VertexID % 6;\n"
 #endif
        "float x = Position.x;\n\
         float y = Position.y;\n\
-        float w = Position[2];\n\
-        float h = Position[3];\n\
+        float w = Position.z;\n\
+        float h = Position.w;\n\
         vec4 p = vec4(x,y,0,1);\n"
 #ifdef USE_QUADS
-       "if((id&3) == 1) { p.x += w; }\n"
-       "else if((id&3) == 2)  { p.x += w; p.y += h; }\n"
-       "else if((id&3) == 3)  { p.y += h; }\n"
+       "if((id) == 1)       { p.x += w; }\n"
+       "else if((id) == 2)  { p.x += w; p.y += h; }\n"
+       "else if((id) == 3)  { p.y += h; }\n"
 #else
        "switch(id) {\n\
         case 0: break;\n\
@@ -131,9 +149,9 @@ char* OpenGLText::cWidgetVSSource2 = {
 #endif
        "vec2 tc = vec2(x,y);\n"
 #ifdef USE_QUADS
-       "if((id&3) == 1)       { tc.x += w; }\n"
-       "else if((id&3) == 2)  { tc.x += w; tc.y += h; }\n"
-       "else if((id&3) == 3)  { tc.y += h; }\n"
+       "if((id) == 1)       { tc.x += w; }\n"
+       "else if((id) == 2)  { tc.x += w; tc.y += h; }\n"
+       "else if((id) == 3)  { tc.y += h; }\n"
 #else
        "switch(id) {\n\
         case 0: break;\n\
@@ -159,9 +177,9 @@ char* OpenGLText::cWidgetFSSource2 = {
 \n\
     void main()\n\
     {\n\
-        float distance = (texture2D( fontTex, vsTC.xy ).x); \n\
+        float a = (texture2D( fontTex, vsTC.xy ).x); \n\
         fragColor.rgb = color.rgb; \n\
-        fragColor.a = color.a * distance;\n\
+        fragColor.a = color.a * a;\n\
     }\n\
     "};
 #else
@@ -560,22 +578,31 @@ bool OpenGLText::init(int w, int h)
             tcs[(4*i)+2] = glyphInfos->glyphs[i].norm.width;
             tcs[(4*i)+3] = glyphInfos->glyphs[i].norm.height;
         }
-        
         GLenum err = glGetError();
         m_locGlyphTexOffset = glGetUniformLocation( m_widgetProgram, "glyphTexOffset" );
-        glProgramUniform1i(m_widgetProgram, m_locGlyphTexOffset, 1);
+        glProgramUniform1i(m_widgetProgram, m_locGlyphTexOffset, 2);
         err = glGetError();
         glGenBuffers( 1, &m_boGlyphTexOffset);
+        glGenTextures( 1, &m_texGlyphTexOffset);
         glBindBuffer(GL_TEXTURE_BUFFER, m_boGlyphTexOffset);
         glBufferData(GL_TEXTURE_BUFFER, 256*4*sizeof(float), tcs, GL_STATIC_DRAW);
         delete [] tcs;
 #else
         locTc  = glGetAttribLocation( m_widgetProgram, "TexCoord" );
 #endif
+#ifdef USE_PSEUDO_INSTANCING
+        //
+        // In this case, send Quad attributes as TBO
+        //
+        m_locQuads = glGetUniformLocation( m_widgetProgram, "quads" );
+        glGenTextures( 1, &m_texQuads );
+        glProgramUniform1i(m_widgetProgram, m_locQuads, 1);
+#else
 #ifdef USE_INSTANCED_ARRAYS
         locGlyph = glGetAttribLocation( m_widgetProgram, "Glyph" );
 #endif
         locPos = glGetAttribLocation( m_widgetProgram, "Position" );
+#endif
     }
     return true;
 }
@@ -608,12 +635,22 @@ void OpenGLText::endString()
         // this could be done after few iterations, if we see that the size if still smaller than the allocation...
         if(m_vbosz < m_vertices.size())
         {
+#ifdef USE_PSEUDO_INSTANCING
+            glBindBuffer( GL_TEXTURE_BUFFER, m_vbo ); // ??!?!? otherewize it crashes
+            glBufferData(GL_TEXTURE_BUFFER, m_vertices.size()*sizeof(Vertex), &(m_vertices.front()), GL_STREAM_DRAW);
+            glBindBuffer( GL_TEXTURE_BUFFER, 0 );
+#else
             glBindBuffer( GL_ARRAY_BUFFER, m_vbo ); // ??!?!? otherewize it crashes
             glNamedBufferData(m_vbo, m_vertices.size()*sizeof(Vertex), &(m_vertices.front()), GL_STREAM_DRAW);
             glBindBuffer( GL_ARRAY_BUFFER, 0 );
+#endif
             m_vbosz = m_vertices.size();
-        } else
-            glNamedBufferSubData(m_vbo, 0, m_vertices.size()*sizeof(Vertex), &(m_vertices.front()));
+        } 
+        //else glNamedBufferSubData(m_vbo, 0, m_vertices.size()*sizeof(Vertex), &(m_vertices.front()));
+#ifndef USE_PSEUDO_INSTANCING
+        //
+        // Vertex attribute format definition
+        //
         static Vertex* pVtxOffset = NULL;
         glVertexAttribFormat(locPos , 4, GL_FLOAT, GL_FALSE, (GLuint)pVtxOffset->pos);
         glVertexAttribBinding(locPos, 1);
@@ -624,36 +661,64 @@ void OpenGLText::endString()
 #ifdef USE_INSTANCED_ARRAYS
         glVertexAttribIFormat(locGlyph, 1, GL_INT, (GLuint)&pVtxOffset->iattr);
         glVertexAttribBinding(locGlyph, 1);
+        //
+        // Divisor for instancing case
+        //
         glVertexBindingDivisor(1, PRIMNUMBER);
 #endif
+        //
         // bind the VBO to the buffer binding #0
+        //
         glBindVertexBuffer(1, m_vbo, 0, sizeof(Vertex));
+        //
         // enable attributes to use
+        //
         glEnableVertexAttribArray( locPos );
 #ifndef USE_FONT_METRIC_AS_TBO
         glEnableVertexAttribArray( locTc );
 #endif
 #ifdef USE_INSTANCED_ARRAYS
         glEnableVertexAttribArray( locGlyph );
-#ifdef USE_FONT_METRIC_AS_TBO
+#endif
+#else //USE_PSEUDO_INSTANCING
         glActiveTexture(GL_TEXTURE1);
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, m_boGlyphTexOffset);
+        glBindTexture(GL_TEXTURE_BUFFER, m_texQuads);
+        glTextureBuffer(m_texQuads, GL_RGBA32F, m_vbo);
 #endif
+#ifdef USE_FONT_METRIC_AS_TBO
+        //
+        // Textures/TBO for the fonts and metric
+        //
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_BUFFER, m_texGlyphTexOffset);
+        glTextureBuffer(m_texGlyphTexOffset, GL_RGBA32F, m_boGlyphTexOffset);
+
 #endif
+
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, m_fontTex);
-
+        glTextureBuffer(m_texQuads, GL_RGBA32F, m_vbo);
+        //
+        // activate the program
+        //
         glUseProgram( m_widgetProgram );
         glProgramUniform4f( m_widgetProgram, m_canvasVar, m_canvas.w, m_canvas.h, m_canvas.ratio, 0 );
-
+        //
+        // Draw
+        //
+#ifdef USE_PSEUDO_INSTANCING
+        glDrawArrays( TOPOLOGY_PRIM, 0, m_vbosz * PRIMNUMBER);
+#else
 #ifdef USE_INSTANCED_ARRAYS
         glDrawArraysInstanced( TOPOLOGY_PRIM, 0, PRIMNUMBER, m_vbosz*PRIMNUMBER);
 #else
         glDrawArrays( TOPOLOGY_PRIM, 0, m_vbosz);
 #endif
+#endif //#ifdef USE_PSEUDO_INSTANCING
 
         glUseProgram( 0 );
 
+#ifndef USE_PSEUDO_INSTANCING
         // switch vertex attribs back off
         glDisableVertexAttribArray( locPos );
 #ifndef USE_FONT_METRIC_AS_TBO
@@ -662,7 +727,8 @@ void OpenGLText::endString()
 #ifdef USE_INSTANCED_ARRAYS
         glDisableVertexAttribArray( locGlyph );
 #endif
-        //GLenum err = glGetError();
+#endif
+        GLenum err = glGetError();
         //assert(err == 0);
         m_vertices.resize(0);
     }
@@ -764,7 +830,9 @@ float OpenGLText::drawString( int x, int y, const char * text, int nbLines, floa
             int pY = lPosY - g.pix.height - g.pix.offY;
 #ifdef USE_INSTANCED_ARRAYS
             v.setPos( pX ,             pY,                  g.pix.width,     g.pix.height);
+#ifndef USE_FONT_METRIC_AS_TBO
             v.setTC ( g.norm.u,        g.norm.v,            g.norm.width,    g.norm.height);
+#endif
             // to find back the Texture coords in atlas
             v.iattr = (*c);
             pushVertex(&v);
