@@ -40,7 +40,7 @@
 #   define PRIMNUMBER 6
 #endif
 #ifdef USE_INSTANCED_ARRAYS
-#   define USE_FONT_METRIC_AS_TBO // I have a bug, here...
+//#   define USE_FONT_METRIC_AS_TBO // I have a bug, here...
 #endif
 
 #pragma warning(disable:4244) // dble to float conversion warning
@@ -635,8 +635,10 @@ void OpenGLText::endString()
 #endif
 #ifdef USE_INSTANCED_ARRAYS
         glEnableVertexAttribArray( locGlyph );
+#ifdef USE_FONT_METRIC_AS_TBO
         glActiveTexture(GL_TEXTURE1);
         glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, m_boGlyphTexOffset);
+#endif
 #endif
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, m_fontTex);
