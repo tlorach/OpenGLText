@@ -4,10 +4,10 @@ This pair of cpp and h file provides a very easy way to draw text in OpenGL, *us
 
 There are many tools and libraries available. But :
 * I needed to have a really simple approach
-* I certainly didn't want to link against any huge monster, such at Freetype library
+* I certainly didn't want to link against any huge monster, such as Freetype library
 * I never got satisfied by any existing tool on their way to batch primitives through OpenGL driver : most are rendering characters one after another (even using immediate mode). Some other might use the deprecated Display List...
 * I did *not* need the whole flexibility that freetype offers
-* I might want to use this implementation on tablets (Adroid and iOS)
+* I might want to use this implementation on tablets (Android and iOS)
 
 This file proposes a very simple approach based on a texture Atlas containing all the necessary Fonts for a specific type and size. If more than one type or more than one size is needed, the application will have to work with many instances of the class and related resource.
 
@@ -38,7 +38,7 @@ render time:
 
 textBaker folder contains few details about this.
 
- For now, I got a bit 'hacky', here: baking Fonts is aschieved with patching GLText 0.3.1 ( http://gltext.sourceforge.net/home.php )
+ For now, I got a bit 'hacky', here: baking Fonts is achieved with patching GLText 0.3.1 ( http://gltext.sourceforge.net/home.php )
 
 This folder contains the changes I made to finally save the data I needed.
 Download freetype (I took 2.3.5-1) and download GLText. Then modify it with the data in this folder.
